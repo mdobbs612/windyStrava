@@ -13,5 +13,5 @@ def strava_leaderboard(id):
 	params = { 'access_token' : strava_access }
 	url = 'https://www.strava.com/api/v3/segments/' + id + '/leaderboard'
 
-	r = requests.get(url, params = params)	
+	r = requests.get(url, params = params )	
 	return r.json()

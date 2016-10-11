@@ -1,5 +1,5 @@
 $(function() {
-  graphSegment("2294005");
+  drawGraph("2294005");
 });
 
 function distance(lat1, lon1, lat2, lon2) {
@@ -34,9 +34,6 @@ String.prototype.toHHMMSS = function () {
     return minutes+':'+seconds;
 }
 
-function graphSegment(id) {
-  var svg = d3.select("svg");
-
   var margin = {top: 20, right: 20, bottom: 30, left: 50},
       width = 700 - margin.left - margin.right,
       height = 400 - margin.top - margin.bottom;
@@ -49,18 +46,23 @@ function graphSegment(id) {
 
   var xAxis = d3.svg.axis()
     .scale(x)
-    .orient("bottom");
+    .orient("bottom")
+    .tickValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
   var yAxis = d3.svg.axis()
+    .ticks(10)
     .scale(y)
-    .orient("left");
+    .orient("left")
+    .tickFormat(function (d) { return d.toString().toHHMMSS(); });
+
+function drawGraph(id) {
+  var svg = d3.select("svg");
 
   var svg = d3.select("body").append("svg")
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom)
     .append("g")
       .attr("transform", "translate(" + margin.left + ',' + margin.top + ")");
-
 
   d3.json("/segment/" + id, function(error, data) {
     startLat = data.start_latitude;
@@ -73,12 +75,14 @@ function graphSegment(id) {
   });
 
   d3.json("/leaderboard/" + id, function(error, data) {
-    console.log(data.entries);
-    var minTime = data.entries[0].moving_time;
-    var maxTime = data.entries[14].moving_time;
+    console.log(data);
+    var minTime = data.entries[0].elapsed_time;
+    var maxTime = data.entries[9].elapsed_time;
 
-    x.domain([0, 14]);
-    y.domain([maxTime, minTime]);
+    var timeMargin = (maxTime - minTime) / 10
+
+    x.domain([0, 11]);
+    y.domain([maxTime + timeMargin, minTime - timeMargin]);
 
     svg.append("g")
       .attr("class", "x axis")
@@ -86,19 +90,68 @@ function graphSegment(id) {
       .call(xAxis);
 
     svg.append("g")
-        .attr("class", "y axis")
-        .call(yAxis);
+      .attr("class", "y axis")
+      .call(yAxis);
 
     svg.selectAll("circle")
-      .data(data.entries)
+      .data(data.entries.slice(0, 10))
       .enter()
       .append("circle")
-      .attr("cx", function(d) {
-        return x(d.rank - 1);
+      .attr("cx", function(d, i) {
+        return x(i + 1);
       })
       .attr("cy", function(d) {
-        console.log(d.moving_time.toString().toHHMMSS())
-        return y(d.moving_time.toString().toHHMMSS());
+        return y(d.moving_time);
+      })
+      .attr("r", 3)
+      .attr("fill", "white")
+      .attr("stroke-width", 2)
+      .attr("stroke", "black");
+
+  });
+}
+
+function updateGraph() {
+
+  var id ="4302773"
+  
+  var svg = d3.select("body").select("svg").select("g");
+  console.log(svg);
+
+  /*d3.json("/segment/" + id, function(error, data) {
+    console.log("Segment call");
+    startLat = data.start_latitude;
+    startLong = data.start_longitude;
+    endLat = data.end_latitude;
+    endLong = data.end_longitude;
+
+    var bear = bearing(startLat, startLong, endLat, endLong);
+    var dist = distance(startLat, startLong, endLat, endLong)
+  });*/
+
+  d3.json("/leaderboard/" + id, function(error, data) {
+    console.log("leaderboard call");
+    console.log(data);
+    var minTime = data.entries[0].moving_time;
+    var maxTime = data.entries[9].moving_time;
+
+    var timeMargin = (maxTime - minTime) / 8
+
+    y.domain([maxTime + timeMargin, minTime - timeMargin]);
+
+    svg.select(".y.axis")
+      .call(yAxis);
+
+    svg.selectAll("circle")
+      .data(data.entries.slice(0, 10))
+      .transition()
+        .duration(1000)
+        .ease("elastic")
+      .attr("cx", function(d, i) {
+        return x(i + 1);
+      })
+      .attr("cy", function(d) {
+        return y(d.moving_time);
       })
       .attr("r", 3);
 
