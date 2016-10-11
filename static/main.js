@@ -22,12 +22,24 @@ function bearing(lat1, lon1, lat2, lon2) {
   return b;
 }
 
+String.prototype.toHHMMSS = function () {
+    var sec_num = parseInt(this, 10); // don't forget the second param
+    var hours   = Math.floor(sec_num / 3600);
+    var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+    var seconds = sec_num - (hours * 3600) - (minutes * 60);
+
+    /*if (hours   < 10) {hours   = "0"+hours;}
+    if (minutes < 10) {minutes = "0"+minutes;}*/
+    if (seconds < 10) {seconds = "0"+seconds;}
+    return minutes+':'+seconds;
+}
+
 function graphSegment(id) {
   var svg = d3.select("svg");
 
   var margin = {top: 20, right: 20, bottom: 30, left: 50},
       width = 700 - margin.left - margin.right,
-      height = 500 - margin.top - margin.bottom;
+      height = 400 - margin.top - margin.bottom;
 
   var y = d3.scale.linear()
     .range([0, height]);
@@ -85,7 +97,8 @@ function graphSegment(id) {
         return x(d.rank - 1);
       })
       .attr("cy", function(d) {
-        return y(d.moving_time);
+        console.log(d.moving_time.toString().toHHMMSS())
+        return y(d.moving_time.toString().toHHMMSS());
       })
       .attr("r", 3);
 
