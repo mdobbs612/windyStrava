@@ -111,7 +111,7 @@ function drawGraph(id) {
 
     x.domain([0, 11]);
     y.domain([maxTime + timeMargin, minTime - timeMargin]);
-    yhr.domain([d3.min(hrs) - 20, d3.max(hrs) + 20])
+    yhr.domain([d3.max(hrs) + 20, d3.min(hrs) - 20])
 
     data.entries.forEach( function(d, i) {
       defs.append("pattern")
@@ -124,7 +124,6 @@ function drawGraph(id) {
         .attr("width", 36)
         .attr("height", 36)
         .attr("xlink:href", function() {
-          console.log(d);
           if (d.athlete_profile != "avatar/athlete/large.png") {
             return d.athlete_profile ;
           } else return "static/avatar.png";
@@ -158,8 +157,38 @@ function drawGraph(id) {
         .attr("stroke", "orange")
         .attr("stroke-opacity", .4);
 
-    hr = svg.selectAll("image")
+    svg.selectAll(".hr")
       .data(data.entries.slice(0, 10))
+      .enter()
+      .append("image")
+        .attr("class", "hr")
+        .attr("xlink:href", "http://iconmonstr.com/wp-content/g/gd/makefg.php?i=../assets/preview/2012/png/iconmonstr-favorite-7.png&r=255&g=46&b=46")
+        .attr("x", function(d, i) {
+          return x(i + 1) - 16;
+        })
+        .attr("y", function(d) {
+          return yhr(d.average_hr) + 16;
+        })
+        .attr("width", 32)
+        .attr("height", 32);
+
+    svg.selectAll(".hr .txt")
+      .data(data.entries.slice(0, 10))
+      .enter()
+      .append("text")
+        .attr("class", "hr txt")
+        .attr("x", function(d, i) {
+          return x(i + 1) - 13;
+        })
+        .attr("y", function(d) {
+          return yhr(d.average_hr) + 35;
+        })
+        .text(function(d, i) { return Math.round(d.average_hr) })
+        .attr("font-family", "sans-serif")
+        .attr("fill", "white");
+
+    hr = svg.selectAll("image")
+      .data(hrs)
       .enter()
       .append("image")
         .attr("xlink:href", "http://iconmonstr.com/wp-content/g/gd/makefg.php?i=../assets/preview/2012/png/iconmonstr-favorite-7.png&r=255&g=46&b=46")
@@ -198,9 +227,14 @@ function updateGraph() {
     var minTime = data.entries[0].moving_time;
     var maxTime = data.entries[9].moving_time;
 
+    var hrs = data.entries.map(function (d) {
+      return d.average_hr;
+    })
+
     var timeMargin = (maxTime - minTime) / 8
 
     y.domain([maxTime + timeMargin, minTime - timeMargin]);
+    yhr.domain([d3.min(hrs) - 20, d3.max(hrs) + 20])
 
     svg.select(".y.axis")
       .call(yAxis);
@@ -208,12 +242,31 @@ function updateGraph() {
     data.entries.forEach( function(d, i) {
       d3.select("#prof_pic_" + i + " image")
         .attr("xlink:href", function() {
-          console.log(d);
           if (d.athlete_profile != "avatar/athlete/large.png") {
             return d.athlete_profile ;
           } else return "static/avatar.png";
         });
     });
+
+    svg.selectAll(".hr")
+      .data(data.entries.slice(0, 10))
+      .transition()
+        .duration(1000)
+        .ease("elastic")
+      .attr("y", function(d,i) {
+        return yhr(hrs[i]) + 16;
+      });
+
+    svg.selectAll(".hr.txt")
+      .data(data.entries.slice(0, 10))
+      .transition()
+        .duration(1000)
+        .ease("elastic")
+      .attr("y", function(d,i) {
+          return yhr(d.average_hr) + 35;
+        })
+      .text(function(d, i) { return Math.round(hrs[i]) });
+
 
     svg.selectAll("circle")
       .data(data.entries.slice(0, 10))
