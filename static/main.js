@@ -22,6 +22,20 @@ function bearing(lat1, lon1, lat2, lon2) {
   return b;
 }
 
+function mousemove() {
+    var rank = Math.round(x.invert(d3.mouse(this)[0]) - 1.75);
+
+    circle = d3.selectAll('circle')
+      .attr("r" , function(d, i) {
+        if (i == rank) return 18;
+        else return 18;
+      })
+      .attr("stroke" , function(d, i) {
+        if (i == rank) return "black";
+        else return "orange";
+      });
+}
+
 String.prototype.toHHMMSS = function () {
     var sec_num = parseInt(this, 10); // don't forget the second param
     var hours   = Math.floor(sec_num / 3600);
@@ -35,10 +49,13 @@ String.prototype.toHHMMSS = function () {
 }
 
   var margin = {top: 20, right: 20, bottom: 30, left: 50},
-      width = 700 - margin.left - margin.right,
-      height = 400 - margin.top - margin.bottom;
+      width = 900 - margin.left - margin.right,
+      height = 600 - margin.top - margin.bottom;
 
   var y = d3.scale.linear()
+    .range([0, height]);
+
+  var yhr = d3.scale.linear()
     .range([0, height]);
 
   var x = d3.scale.linear()
@@ -46,11 +63,13 @@ String.prototype.toHHMMSS = function () {
 
   var xAxis = d3.svg.axis()
     .scale(x)
+    .innerTickSize(-height)
     .orient("bottom")
     .tickValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
   var yAxis = d3.svg.axis()
     .ticks(10)
+    .innerTickSize(-width)
     .scale(y)
     .orient("left")
     .tickFormat(function (d) { return d.toString().toHHMMSS(); });
@@ -61,8 +80,11 @@ function drawGraph(id) {
   var svg = d3.select("body").append("svg")
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom)
+      .on("mousemove", mousemove)
     .append("g")
       .attr("transform", "translate(" + margin.left + ',' + margin.top + ")");
+
+  var defs = svg.append("defs").attr("id", "imgdefs")
 
   d3.json("/segment/" + id, function(error, data) {
     startLat = data.start_latitude;
@@ -76,13 +98,38 @@ function drawGraph(id) {
 
   d3.json("/leaderboard/" + id, function(error, data) {
     console.log(data);
+
     var minTime = data.entries[0].elapsed_time;
     var maxTime = data.entries[9].elapsed_time;
 
+    var hrs = data.entries.map(function (d) {
+      return d.average_hr;
+    })
+
     var timeMargin = (maxTime - minTime) / 10
+    var hrMargin = d3.min(hrs)
 
     x.domain([0, 11]);
     y.domain([maxTime + timeMargin, minTime - timeMargin]);
+    yhr.domain([d3.min(hrs) - 20, d3.max(hrs) + 20])
+
+    data.entries.forEach( function(d, i) {
+      defs.append("pattern")
+        .attr("id", "prof_pic_" + i)
+        .attr("height", 1)
+        .attr("width", 1)
+        .attr("x", "0")
+        .attr("y", "0")
+        .append("image")
+        .attr("width", 36)
+        .attr("height", 36)
+        .attr("xlink:href", function() {
+          console.log(d);
+          if (d.athlete_profile != "avatar/athlete/large.png") {
+            return d.athlete_profile ;
+          } else return "static/avatar.png";
+        });
+    });
 
     svg.append("g")
       .attr("class", "x axis")
@@ -93,7 +140,7 @@ function drawGraph(id) {
       .attr("class", "y axis")
       .call(yAxis);
 
-    svg.selectAll("circle")
+    circles = svg.selectAll("circle")
       .data(data.entries.slice(0, 10))
       .enter()
       .append("circle")
@@ -103,10 +150,27 @@ function drawGraph(id) {
       .attr("cy", function(d) {
         return y(d.moving_time);
       })
-      .attr("r", 3)
-      .attr("fill", "white")
-      .attr("stroke-width", 2)
-      .attr("stroke", "black");
+      .attr("r", 18)
+      .attr("fill", function (d, i) {
+        return "url(#prof_pic_" + i + ")";
+      })
+      .attr("stroke-width", 3)
+        .attr("stroke", "orange")
+        .attr("stroke-opacity", .4);
+
+    hr = svg.selectAll("image")
+      .data(data.entries.slice(0, 10))
+      .enter()
+      .append("image")
+        .attr("xlink:href", "http://iconmonstr.com/wp-content/g/gd/makefg.php?i=../assets/preview/2012/png/iconmonstr-favorite-7.png&r=255&g=46&b=46")
+        .attr("x", function(d, i) {
+          return x(i + 1) - 16;
+        })
+        .attr("y", function(d) {
+          return yhr(d.average_hr) + 16;
+        })
+        .attr("width", 32)
+        .attr("height", 32);
 
   });
 }
@@ -116,7 +180,6 @@ function updateGraph() {
   var id ="4302773"
   
   var svg = d3.select("body").select("svg").select("g");
-  console.log(svg);
 
   /*d3.json("/segment/" + id, function(error, data) {
     console.log("Segment call");
@@ -142,6 +205,16 @@ function updateGraph() {
     svg.select(".y.axis")
       .call(yAxis);
 
+    data.entries.forEach( function(d, i) {
+      d3.select("#prof_pic_" + i + " image")
+        .attr("xlink:href", function() {
+          console.log(d);
+          if (d.athlete_profile != "avatar/athlete/large.png") {
+            return d.athlete_profile ;
+          } else return "static/avatar.png";
+        });
+    });
+
     svg.selectAll("circle")
       .data(data.entries.slice(0, 10))
       .transition()
@@ -153,8 +226,11 @@ function updateGraph() {
       .attr("cy", function(d) {
         return y(d.moving_time);
       })
-      .attr("r", 3);
+      .attr("r", 18)
+      .attr("fill", function (d, i) {
+        return "url(#prof_pic_" + i + ")"});
 
   });
 
+  
 }
