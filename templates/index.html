@@ -7,18 +7,49 @@
     <link href={{ url_for('static', filename='main.css') }} rel="stylesheet" media="screen">
   </head>
   <body>
-    <div class="container">
-    </div>
     <script src={{ url_for('static', filename='./bower_components/jquery/dist/jquery.min.js') }}></script>
     <script src={{ url_for('static', filename='./bower_components/bootstrap/dist/js/bootstrap.min.js') }}></script>
     <script src={{ url_for('static', filename='./bower_components/d3/d3.min.js') }}></script>
     <script src={{ url_for('static', filename='main.js') }}></script>
-    <h1>Header</h1>
-    <div id="option">
-    <input name="updateButton" 
-           type="button" 
-           value="Update" 
-           onclick="updateGraph()" />
-</div>
+
+    <div id="top-bar">
+      <div class="title">
+        strava app 
+      </div>
+      <div class="powered-by">
+      </div>
+    </div>
+    <div id="page-body">
+      <div id="segment-graph">
+        <div id="legend">
+          <div class="input-group">
+            <span class="input-group-addon">Segment ID</span>
+            <input type="text" id="segment-id" class="form-control">
+            <span class="input-group-btn">
+              <button class="btn btn-default" onclick="updateGraph()">Go</button>
+            </span>
+          </div>
+          <div class="input-group">
+            <span class="input-group-addon">Gender</span>
+            <label class="radio-inline"><input type="radio" checked="checked" value="M" name="gender">Men</label>
+            <label class="radio-inline"><input type="radio" value="F" name="gender">Women</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="wind-select" value="">Display wind data</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="hr-select" value="">Display heart rate data</label>
+          </div>
+          <div class="checkbox">
+            <label><input type="checkbox" id="watt-select" value="">Display wattage data</label>
+          </div>
+        </div>
+        <div id="graph">
+        </div>
+      </div>
+      <div id="segment-map">
+      </div>
+    </div>
+
   </body>
 </html>

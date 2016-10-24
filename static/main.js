@@ -1,5 +1,6 @@
 $(function() {
-  drawGraph("2294005");
+  drawGraph("2622759", "M", true);
+
 });
 
 function distance(lat1, lon1, lat2, lon2) {
@@ -50,7 +51,7 @@ String.prototype.toHHMMSS = function () {
 
   var margin = {top: 20, right: 20, bottom: 30, left: 50},
       width = 900 - margin.left - margin.right,
-      height = 600 - margin.top - margin.bottom;
+      height = 500 - margin.top - margin.bottom;
 
   var y = d3.scale.linear()
     .range([0, height]);
@@ -74,46 +75,65 @@ String.prototype.toHHMMSS = function () {
     .orient("left")
     .tickFormat(function (d) { return d.toString().toHHMMSS(); });
 
-function drawGraph(id) {
+  var lineFunction = d3.svg.line()
+    .x(function(d) { return d.x; })
+    .y(function(d) { return d.y; })
+    .interpolate("linear");
+
+  d3.selection.prototype.moveToBack = function() {  
+        return this.each(function() { 
+            var firstChild = this.parentNode.firstChild; 
+            if (firstChild) { 
+                this.parentNode.insertBefore(this, firstChild); 
+            } 
+        });
+    };
+
+function drawGraph(id, gender, heart_rate) {
   var svg = d3.select("svg");
 
-  var svg = d3.select("body").append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
+  var svg = d3.select("#graph").append("svg")
+      .attr("width", "100%")
+      .attr("height", "100%")
       .on("mousemove", mousemove)
     .append("g")
       .attr("transform", "translate(" + margin.left + ',' + margin.top + ")");
 
   var defs = svg.append("defs").attr("id", "imgdefs")
 
-  d3.json("/segment/" + id, function(error, data) {
-    startLat = data.start_latitude;
-    startLong = data.start_longitude;
-    endLat = data.end_latitude;
-    endLong = data.end_longitude;
+    var lat1, lat2, lon1, lon2;
 
-    var bear = bearing(startLat, startLong, endLat, endLong);
-    var dist = distance(startLat, startLong, endLat, endLong)
+  d3.json("/segment/" + id, function(error, data) {
+    lat1 = data.start_latitude
+    lat2 = data.end_latitude
+    lon1 = data.start_longitude
+    lon2 = data.end_longitude
+    var bear = bearing(lat1, lon1, lat2, lon2);
+    var dist = distance(lat1, lon1, lat2, lon2);
   });
 
-  d3.json("/leaderboard/" + id, function(error, data) {
+
+  d3.json("/leaderboard/" + id + "/" + gender, function(error, data) {
     console.log(data);
 
-    var minTime = data.entries[0].elapsed_time;
-    var maxTime = data.entries[9].elapsed_time;
+    var ldr_data = data;
 
-    var hrs = data.entries.map(function (d) {
+    var minTime = ldr_data.entries[0].elapsed_time;
+    var maxTime = ldr_data.entries[9].elapsed_time;
+
+    // get list of heart rates
+    var hrs = ldr_data.entries.map(function (d) {
       return d.average_hr;
     })
 
     var timeMargin = (maxTime - minTime) / 10
-    var hrMargin = d3.min(hrs)
 
     x.domain([0, 11]);
     y.domain([maxTime + timeMargin, minTime - timeMargin]);
-    yhr.domain([d3.max(hrs) + 20, d3.min(hrs) - 20])
+    yhr.domain([d3.min(hrs) - 20, d3.max(hrs) + 20])
 
-    data.entries.forEach( function(d, i) {
+    // create pattern for each profile picure to be applied to svg circles
+    ldr_data.entries.forEach( function(d, i) {
       defs.append("pattern")
         .attr("id", "prof_pic_" + i)
         .attr("height", 1)
@@ -128,101 +148,138 @@ function drawGraph(id) {
             return d.athlete_profile ;
           } else return "static/avatar.png";
         });
-    });
+    }); 
 
+    // x axis
     svg.append("g")
       .attr("class", "x axis")
       .attr("transform", "translate(0," + height + ")")
       .call(xAxis);
 
+    // y axis
     svg.append("g")
       .attr("class", "y axis")
       .call(yAxis);
 
-    circles = svg.selectAll("circle")
-      .data(data.entries.slice(0, 10))
+    // draw white circles for time data points
+    circles = svg.selectAll(".white-circ")
+      .data(ldr_data.entries.slice(0, 10))
       .enter()
       .append("circle")
+      .attr("class", ".white-circ")
       .attr("cx", function(d, i) {
         return x(i + 1);
       })
       .attr("cy", function(d) {
         return y(d.moving_time);
       })
-      .attr("r", 18)
-      .attr("fill", function (d, i) {
-        return "url(#prof_pic_" + i + ")";
-      })
-      .attr("stroke-width", 3)
-        .attr("stroke", "orange")
-        .attr("stroke-opacity", .4);
+      .attr("fill", "white");
 
+    // draw prfile picture circles for time data points
+    circles = svg.selectAll(".prof-circ")
+      .data(ldr_data.entries.slice(0, 10))
+      .enter()
+      .append("circle")
+      .attr("class", ".prof-circ")
+      .attr("cx", function(d, i) {
+        return x(i + 1);
+      })
+      .attr("cy", function(d) {
+        return y(d.moving_time);
+      })
+      .attr("fill", function (d, i) {
+        return "url(#prof_pic_" + i + ")"
+      })
+      .attr("stroke-width",  "3px")
+      .attr("stroke", "#66CCCC");
+
+
+    // add hearts for heart rate readings, only display if heart-rate
     svg.selectAll(".hr")
-      .data(data.entries.slice(0, 10))
+      .data(ldr_data.entries.slice(0, 10))
       .enter()
       .append("image")
-        .attr("class", "hr")
-        .attr("xlink:href", "http://iconmonstr.com/wp-content/g/gd/makefg.php?i=../assets/preview/2012/png/iconmonstr-favorite-7.png&r=255&g=46&b=46")
-        .attr("x", function(d, i) {
-          return x(i + 1) - 16;
-        })
-        .attr("y", function(d) {
-          return yhr(d.average_hr) + 16;
-        })
-        .attr("width", 32)
-        .attr("height", 32);
+      .attr("class", "hr")
+      .attr("xlink:href", "/static/heart90.png")
+      .attr("x", function(d, i) { return x(i + 1) - 14; })
+      .attr("y", function(d) { return yhr(d.average_hr) + 14; })
+      .attr("display", function() { if (heart_rate) return "block" 
+                                    else return "none"});
 
+    // add text labels for heart rates, only display if heart-rate
     svg.selectAll(".hr .txt")
-      .data(data.entries.slice(0, 10))
+      .data(ldr_data.entries.slice(0, 10))
       .enter()
       .append("text")
-        .attr("class", "hr txt")
-        .attr("x", function(d, i) {
-          return x(i + 1) - 13;
-        })
-        .attr("y", function(d) {
-          return yhr(d.average_hr) + 35;
-        })
-        .text(function(d, i) { return Math.round(d.average_hr) })
-        .attr("font-family", "sans-serif")
-        .attr("fill", "white");
+      .attr("class", "hr txt")
+      .attr("x", function(d, i) { return x(i + 1) - 11; })
+      .attr("y", function(d) { return yhr(d.average_hr) + 31; })
+      .text(function(d, i) { return Math.round(d.average_hr) })
+      .attr("display", function() { if (heart_rate) return "block" 
+                                    else return "none"});
 
-    hr = svg.selectAll("image")
-      .data(hrs)
-      .enter()
-      .append("image")
-        .attr("xlink:href", "http://iconmonstr.com/wp-content/g/gd/makefg.php?i=../assets/preview/2012/png/iconmonstr-favorite-7.png&r=255&g=46&b=46")
-        .attr("x", function(d, i) {
-          return x(i + 1) - 16;
-        })
-        .attr("y", function(d) {
-          return yhr(d.average_hr) + 16;
-        })
-        .attr("width", 32)
-        .attr("height", 32);
+    ldr_data.entries.slice(0, 10).forEach( function(d, i) {
+      date = d.start_date_local;
+      hour = parseInt(date.substring(11, 13)).toString();
 
+      if (i < 3) {
+          var tempi = i;
+          d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
+            function(error, data) {
+              hour_weather = data.hourly.data[hour]
+
+              br = (hour_weather.windBearing - 90) % 360;
+              ws = hour_weather.windSpeed;
+              d.wind_bearing = br
+              d.wind_speed = ws
+
+              var triData = [ 
+                { "x" : x(i + 1) - 20 * Math.cos((br + 90) * .0174544), 
+                  "y" : y(d.moving_time) - 20 * Math.sin((br + 90) * .0174544) }, 
+                { "x" : x(i + 1) + 20 * Math.cos((br + 90) * .0174544),
+                  "y" : y(d.moving_time) + 20 * Math.sin((br + 90) * .0174544) },
+                { "x" : x(i + 1) + d.wind_speed * -5 * Math.cos(d.wind_bearing * .0174533),
+                  "y" : y(d.moving_time) + d.wind_speed * -5 * Math.sin(d.wind_bearing * .0174533) }
+                ];
+
+              svg.append("path")
+                .attr("d", lineFunction(triData))
+                .attr("stroke", "66CCCC")
+                .attr("stroke-width", 2)
+                .attr("fill", "#66CCCC")
+                .moveToBack();
+
+            })
+        }
+    })
   });
 }
 
 function updateGraph() {
+  console.log("CALLED");
 
-  var id ="4302773"
+  var id = d3.select("#segment-id")[0][0].value;
+  if (id === "") id =  "4302773"
+
+  var gender = d3.select("input[name='gender']:checked")[0][0].value;
+
+  
   
   var svg = d3.select("body").select("svg").select("g");
 
-  /*d3.json("/segment/" + id, function(error, data) {
-    console.log("Segment call");
-    startLat = data.start_latitude;
-    startLong = data.start_longitude;
-    endLat = data.end_latitude;
-    endLong = data.end_longitude;
+  var lat1, lat2, lon1, lon2;
 
-    var bear = bearing(startLat, startLong, endLat, endLong);
-    var dist = distance(startLat, startLong, endLat, endLong)
-  });*/
+  d3.json("/segment/" + id, function(error, data) {
+    lat1 = data.start_latitude;
+    lon1 = data.start_longitude;
+    lat2 = data.end_latitude;
+    lon2 = data.end_longitude;
 
-  d3.json("/leaderboard/" + id, function(error, data) {
-    console.log("leaderboard call");
+    var bear = bearing(lat1, lon1, lat2, lon2);
+    var dist = distance(lat1, lon1, lat2, lon2);
+  });
+
+  d3.json("/leaderboard/" + id + "/" + gender, function(error, data) {
     console.log(data);
     var minTime = data.entries[0].moving_time;
     var maxTime = data.entries[9].moving_time;
@@ -263,12 +320,24 @@ function updateGraph() {
         .duration(1000)
         .ease("elastic")
       .attr("y", function(d,i) {
-          return yhr(d.average_hr) + 35;
+          return yhr(d.average_hr) + 33;
         })
       .text(function(d, i) { return Math.round(hrs[i]) });
 
+    svg.selectAll(".white-circ")
+      .data(data.entries.slice(0, 10))
+      .transition()
+        .duration(1000)
+        .ease("elastic")
+      .attr("cx", function(d, i) {
+        return x(i + 1);
+      })
+      .attr("cy", function(d) {
+        return y(d.moving_time);
+      })
+      .attr("r", 18);
 
-    svg.selectAll("circle")
+    svg.selectAll(".prof-circ")
       .data(data.entries.slice(0, 10))
       .transition()
         .duration(1000)
@@ -283,6 +352,46 @@ function updateGraph() {
       .attr("fill", function (d, i) {
         return "url(#prof_pic_" + i + ")"});
 
+    svg.selectAll(".wind_line")
+      .data(data.entries.slice(0, 10))
+      .transition()
+        .duration(1000)
+      .attr("class", "wind_line")
+      .attr("x1", function(d, i) { return x(i + 1); })
+      .attr("x2", function(d, i) { return x(i + 1); })
+      .attr("y1", function(d) { return y(d.moving_time) ; })
+      .attr("y2", function(d) { return y(d.moving_time); })
+      .attr("stroke", "blue")
+      .attr("stroke-width", 2)
+      .attr("display", "block");
+
+
+    data.entries.slice(0, 10).forEach( function(d, i) {
+      date = d.start_date_local;
+      hour = parseInt(date.substring(11, 13)).toString();
+
+      if (i < 2) {
+          var tempi = i;
+          d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
+            function(error, data) {
+              hour_weather = data.hourly.data[hour]
+
+              d.wind_bearing = (hour_weather.windBearing + 270) % 360;
+              d.wind_speed = hour_weather.windSpeed;
+              
+              svg.selectAll(".wind_line")
+                .filter( function(d, i) { return i === tempi })
+                .attr("y2", function(d) {
+                  console.log("changing y", d.wind_speed * -7 * Math.sin(d.wind_bearing * .0174533));
+                  return y(d.moving_time) + d.wind_speed * -7 * Math.sin(d.wind_bearing * .0174533);
+                })
+                .attr("x2", function(d) {
+                  return x(d.rank) + d.wind_speed * 7 * Math.cos(d.wind_bearing * .0174533);
+                })
+                .attr("display", "block");
+            })
+        }
+    })
   });
 
   
