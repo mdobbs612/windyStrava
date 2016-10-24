@@ -362,7 +362,7 @@ function updateGraph() {
           d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
             function(error, data) {
               hour_weather = data.hourly.data[hour]
-
+              //should be the same
               br = (hour_weather.windBearing - 90) % 360;
               ws = hour_weather.windSpeed;
               d.wind_bearing = br
