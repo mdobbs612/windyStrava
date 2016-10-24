@@ -244,6 +244,7 @@ function drawGraph(id, gender, heart_rate) {
 
               svg.append("path")
                 .attr("d", lineFunction(triData))
+                .attr("class", "wind-triangle")
                 .attr("stroke", "66CCCC")
                 .attr("stroke-width", 2)
                 .attr("fill", "#66CCCC")
@@ -263,8 +264,6 @@ function updateGraph() {
 
   var gender = d3.select("input[name='gender']:checked")[0][0].value;
 
-  
-  
   var svg = d3.select("body").select("svg").select("g");
 
   var lat1, lat2, lon1, lon2;
@@ -292,6 +291,8 @@ function updateGraph() {
 
     y.domain([maxTime + timeMargin, minTime - timeMargin]);
     yhr.domain([d3.min(hrs) - 20, d3.max(hrs) + 20])
+
+    svg.selectAll(".wind-triangle").remove();
 
     svg.select(".y.axis")
       .call(yAxis);
@@ -352,20 +353,46 @@ function updateGraph() {
       .attr("fill", function (d, i) {
         return "url(#prof_pic_" + i + ")"});
 
-    svg.selectAll(".wind_line")
-      .data(data.entries.slice(0, 10))
-      .transition()
-        .duration(1000)
-      .attr("class", "wind_line")
-      .attr("x1", function(d, i) { return x(i + 1); })
-      .attr("x2", function(d, i) { return x(i + 1); })
-      .attr("y1", function(d) { return y(d.moving_time) ; })
-      .attr("y2", function(d) { return y(d.moving_time); })
-      .attr("stroke", "blue")
-      .attr("stroke-width", 2)
-      .attr("display", "block");
+    data.entries.slice(0, 10).forEach( function(d, i) {
+      date = d.start_date_local;
+      hour = parseInt(date.substring(11, 13)).toString();
+
+      if (i < 3) {
+          var tempi = i;
+          d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
+            function(error, data) {
+              hour_weather = data.hourly.data[hour]
+
+              br = (hour_weather.windBearing - 90) % 360;
+              ws = hour_weather.windSpeed;
+              d.wind_bearing = br
+              d.wind_speed = ws
+
+              var triData = [ 
+                { "x" : x(i + 1) - 20 * Math.cos((br + 90) * .0174544), 
+                  "y" : y(d.moving_time) - 20 * Math.sin((br + 90) * .0174544) }, 
+                { "x" : x(i + 1) + 20 * Math.cos((br + 90) * .0174544),
+                  "y" : y(d.moving_time) + 20 * Math.sin((br + 90) * .0174544) },
+                { "x" : x(i + 1) + d.wind_speed * -5 * Math.cos(d.wind_bearing * .0174533),
+                  "y" : y(d.moving_time) + d.wind_speed * -5 * Math.sin(d.wind_bearing * .0174533) }
+                ];
+
+              svg.append("path")
+                .attr("d", lineFunction(triData))
+                .attr("class", "wind-triangle")
+                .attr("stroke", "66CCCC")
+                .attr("stroke-width", 2)
+                .attr("fill", "#66CCCC")
+                .moveToBack();
+
+            })
+        }
+    })
 
 
+
+
+/*
     data.entries.slice(0, 10).forEach( function(d, i) {
       date = d.start_date_local;
       hour = parseInt(date.substring(11, 13)).toString();
@@ -391,7 +418,7 @@ function updateGraph() {
                 .attr("display", "block");
             })
         }
-    })
+    })*/
   });
 
   
