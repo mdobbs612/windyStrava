@@ -161,22 +161,8 @@ function drawGraph(id, gender, heart_rate) {
       .attr("class", "y axis")
       .call(yAxis);
 
-    // draw white circles for time data points
-    circles = svg.selectAll(".white-circ")
-      .data(ldr_data.entries.slice(0, 10))
-      .enter()
-      .append("circle")
-      .attr("class", ".white-circ")
-      .attr("cx", function(d, i) {
-        return x(i + 1);
-      })
-      .attr("cy", function(d) {
-        return y(d.moving_time);
-      })
-      .attr("fill", "white");
-
     // draw prfile picture circles for time data points
-    circles = svg.selectAll(".prof-circ")
+    circles = svg.selectAll("circle")
       .data(ldr_data.entries.slice(0, 10))
       .enter()
       .append("circle")
@@ -188,7 +174,7 @@ function drawGraph(id, gender, heart_rate) {
         return y(d.moving_time);
       })
       .attr("fill", function (d, i) {
-        return "url(#prof_pic_" + i + ")"
+        return "url(#prof_pic_" + i + " )"
       })
       .attr("stroke-width",  "3px")
       .attr("stroke", "#66CCCC");
@@ -218,6 +204,8 @@ function drawGraph(id, gender, heart_rate) {
       .attr("display", function() { if (heart_rate) return "block" 
                                     else return "none"});
 
+    svg.selectAll(".white-circ").remove();
+
     ldr_data.entries.slice(0, 10).forEach( function(d, i) {
       date = d.start_date_local;
       hour = parseInt(date.substring(11, 13)).toString();
@@ -241,6 +229,14 @@ function drawGraph(id, gender, heart_rate) {
                 { "x" : x(i + 1) + d.wind_speed * -5 * Math.cos(d.wind_bearing * .0174533),
                   "y" : y(d.moving_time) + d.wind_speed * -5 * Math.sin(d.wind_bearing * .0174533) }
                 ];
+
+              svg.append("circle")
+                .attr("cx", x(i + 1))
+                .attr("cy", y(d.moving_time))
+                .attr("r", 18)
+                .attr("fill", "white")
+                .attr("class", "white-circ")
+                .moveToBack();
 
               svg.append("path")
                 .attr("d", lineFunction(triData))
@@ -325,20 +321,9 @@ function updateGraph() {
         })
       .text(function(d, i) { return Math.round(hrs[i]) });
 
-    svg.selectAll(".white-circ")
-      .data(data.entries.slice(0, 10))
-      .transition()
-        .duration(1000)
-        .ease("elastic")
-      .attr("cx", function(d, i) {
-        return x(i + 1);
-      })
-      .attr("cy", function(d) {
-        return y(d.moving_time);
-      })
-      .attr("r", 18);
+    svg.selectAll(".white-circ").remove();
 
-    svg.selectAll(".prof-circ")
+    svg.selectAll("circle")
       .data(data.entries.slice(0, 10))
       .transition()
         .duration(1000)
@@ -347,17 +332,19 @@ function updateGraph() {
         return x(i + 1);
       })
       .attr("cy", function(d) {
+        console.log(y(d.moving_time));
         return y(d.moving_time);
       })
       .attr("r", 18)
       .attr("fill", function (d, i) {
-        return "url(#prof_pic_" + i + ")"});
+        return "url(#prof_pic_" + i + ")"})
+
 
     data.entries.slice(0, 10).forEach( function(d, i) {
       date = d.start_date_local;
       hour = parseInt(date.substring(11, 13)).toString();
 
-      if (i < 3) {
+      if (i < 7) {
           var tempi = i;
           d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
             function(error, data) {
@@ -367,6 +354,7 @@ function updateGraph() {
               ws = hour_weather.windSpeed;
               d.wind_bearing = br
               d.wind_speed = ws
+              console.log(y(d.moving_time));
 
               var triData = [ 
                 { "x" : x(i + 1) - 20 * Math.cos((br + 90) * .0174544), 
@@ -377,6 +365,14 @@ function updateGraph() {
                   "y" : y(d.moving_time) + d.wind_speed * -5 * Math.sin(d.wind_bearing * .0174533) }
                 ];
 
+              svg.append("circle")
+                .attr("cx", x(i + 1))
+                .attr("cy", y(d.moving_time))
+                .attr("r", 18)
+                .attr("fill", "white")
+                .attr("class", "white-circ")
+                .moveToBack();
+
               svg.append("path")
                 .attr("d", lineFunction(triData))
                 .attr("class", "wind-triangle")
@@ -384,7 +380,6 @@ function updateGraph() {
                 .attr("stroke-width", 2)
                 .attr("fill", "#66CCCC")
                 .moveToBack();
-
             })
         }
     })
