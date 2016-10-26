@@ -1,5 +1,5 @@
 $(function() {
-  drawGraph("2622759", "M", true);
+  drawGraph("2622759", "M", true, true);
 
 });
 
@@ -28,13 +28,9 @@ function mousemove() {
 
     circle = d3.selectAll('circle')
       .attr("r" , function(d, i) {
-        if (i == rank) return 18;
+        if (i == rank) return 22;
         else return 18;
       })
-      .attr("stroke" , function(d, i) {
-        if (i == rank) return "black";
-        else return "orange";
-      });
 }
 
 String.prototype.toHHMMSS = function () {
@@ -49,7 +45,7 @@ String.prototype.toHHMMSS = function () {
     return minutes+':'+seconds;
 }
 
-  var margin = {top: 20, right: 20, bottom: 30, left: 50},
+  var margin = {top: 20, right: 20, bottom: 50, left: 50},
       width = 900 - margin.left - margin.right,
       height = 500 - margin.top - margin.bottom;
 
@@ -57,7 +53,7 @@ String.prototype.toHHMMSS = function () {
     .range([0, height]);
 
   var yhr = d3.scale.linear()
-    .range([0, height]);
+    .range([height, 0]);
 
   var x = d3.scale.linear()
     .range([0, width]);
@@ -89,7 +85,7 @@ String.prototype.toHHMMSS = function () {
         });
     };
 
-function drawGraph(id, gender, heart_rate) {
+function drawGraph(id, gender, heart_rate, wind) {
   var svg = d3.select("svg");
 
   var svg = d3.select("#graph").append("svg")
@@ -101,7 +97,7 @@ function drawGraph(id, gender, heart_rate) {
 
   var defs = svg.append("defs").attr("id", "imgdefs")
 
-    var lat1, lat2, lon1, lon2;
+  var lat1, lat2, lon1, lon2;
 
   d3.json("/segment/" + id, function(error, data) {
     lat1 = data.start_latitude
@@ -110,6 +106,8 @@ function drawGraph(id, gender, heart_rate) {
     lon2 = data.end_longitude
     var bear = bearing(lat1, lon1, lat2, lon2);
     var dist = distance(lat1, lon1, lat2, lon2);
+
+    d3.select("#segment-name").text(data.name);
   });
 
 
@@ -177,7 +175,10 @@ function drawGraph(id, gender, heart_rate) {
         return "url(#prof_pic_" + i + " )"
       })
       .attr("stroke-width",  "3px")
-      .attr("stroke", "#66CCCC");
+      .attr("stroke", function() {
+        if (wind) return "#66CCCC";
+        else return "orange";
+      });
 
 
     // add hearts for heart rate readings, only display if heart-rate
@@ -206,49 +207,51 @@ function drawGraph(id, gender, heart_rate) {
 
     svg.selectAll(".white-circ").remove();
 
-    ldr_data.entries.slice(0, 10).forEach( function(d, i) {
-      date = d.start_date_local;
-      hour = parseInt(date.substring(11, 13)).toString();
+    if (wind) {
+      ldr_data.entries.slice(0, 10).forEach( function(d, i) {
+        date = d.start_date_local;
+        hour = parseInt(date.substring(11, 13)).toString();
 
-      if (i < 3) {
-          var tempi = i;
-          d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
-            function(error, data) {
-              hour_weather = data.hourly.data[hour]
+        if (i < 3) {
+            var tempi = i;
+            d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
+              function(error, data) {
+                hour_weather = data.hourly.data[hour]
 
-              br = (hour_weather.windBearing - 90) % 360;
-              ws = hour_weather.windSpeed;
-              d.wind_bearing = br
-              d.wind_speed = ws
+                br = (hour_weather.windBearing - 90) % 360;
+                ws = hour_weather.windSpeed;
+                d.wind_bearing = br
+                d.wind_speed = ws
 
-              var triData = [ 
-                { "x" : x(i + 1) - 20 * Math.cos((br + 90) * .0174544), 
-                  "y" : y(d.moving_time) - 20 * Math.sin((br + 90) * .0174544) }, 
-                { "x" : x(i + 1) + 20 * Math.cos((br + 90) * .0174544),
-                  "y" : y(d.moving_time) + 20 * Math.sin((br + 90) * .0174544) },
-                { "x" : x(i + 1) + d.wind_speed * -5 * Math.cos(d.wind_bearing * .0174533),
-                  "y" : y(d.moving_time) + d.wind_speed * -5 * Math.sin(d.wind_bearing * .0174533) }
-                ];
+                var triData = [ 
+                  { "x" : x(i + 1) - 20 * Math.cos((br + 90) * .0174544), 
+                    "y" : y(d.moving_time) - 20 * Math.sin((br + 90) * .0174544) }, 
+                  { "x" : x(i + 1) + 20 * Math.cos((br + 90) * .0174544),
+                    "y" : y(d.moving_time) + 20 * Math.sin((br + 90) * .0174544) },
+                  { "x" : x(i + 1) + d.wind_speed * -5 * Math.cos(d.wind_bearing * .0174533),
+                    "y" : y(d.moving_time) + d.wind_speed * -5 * Math.sin(d.wind_bearing * .0174533) }
+                  ];
 
-              svg.append("circle")
-                .attr("cx", x(i + 1))
-                .attr("cy", y(d.moving_time))
-                .attr("r", 18)
-                .attr("fill", "white")
-                .attr("class", "white-circ")
-                .moveToBack();
+                svg.append("circle")
+                  .attr("cx", x(i + 1))
+                  .attr("cy", y(d.moving_time))
+                  .attr("r", 18)
+                  .attr("fill", "white")
+                  .attr("class", "white-circ")
+                  .moveToBack();
 
-              svg.append("path")
-                .attr("d", lineFunction(triData))
-                .attr("class", "wind-triangle")
-                .attr("stroke", "66CCCC")
-                .attr("stroke-width", 2)
-                .attr("fill", "#66CCCC")
-                .moveToBack();
+                svg.append("path")
+                  .attr("d", lineFunction(triData))
+                  .attr("class", "wind-triangle")
+                  .attr("stroke", "66CCCC")
+                  .attr("stroke-width", 2)
+                  .attr("fill", "#66CCCC")
+                  .moveToBack();
 
-            })
-        }
-    })
+              })
+          }
+      })
+    }
   });
 }
 
@@ -259,7 +262,8 @@ function updateGraph() {
   if (id === "") id =  "4302773"
 
   var gender = d3.select("input[name='gender']:checked")[0][0].value;
-
+  var wind = d3.select("#wind-select")[0][0].checked;
+  var heart_rate = d3.select("#hr-select")[0][0].checked;
   var svg = d3.select("body").select("svg").select("g");
 
   var lat1, lat2, lon1, lon2;
@@ -309,6 +313,10 @@ function updateGraph() {
         .ease("elastic")
       .attr("y", function(d,i) {
         return yhr(hrs[i]) + 16;
+      })
+      .attr("display", function() {
+        if (heart_rate) return "block";
+        else return "none"
       });
 
     svg.selectAll(".hr.txt")
@@ -319,7 +327,11 @@ function updateGraph() {
       .attr("y", function(d,i) {
           return yhr(d.average_hr) + 33;
         })
-      .text(function(d, i) { return Math.round(hrs[i]) });
+      .text(function(d, i) { return Math.round(hrs[i]) })
+      .attr("display", function() {
+        if (heart_rate) return "block";
+        else return "none"
+      });
 
     svg.selectAll(".white-circ").remove();
 
@@ -336,84 +348,58 @@ function updateGraph() {
         return y(d.moving_time);
       })
       .attr("r", 18)
+      .attr("stroke", function() {
+        if (wind) return "#66CCCC";
+        else return "orange";
+      })
       .attr("fill", function (d, i) {
         return "url(#prof_pic_" + i + ")"})
 
+    if (wind) {
+      data.entries.slice(0, 10).forEach( function(d, i) {
+        date = d.start_date_local;
+        hour = parseInt(date.substring(11, 13)).toString();
 
-    data.entries.slice(0, 10).forEach( function(d, i) {
-      date = d.start_date_local;
-      hour = parseInt(date.substring(11, 13)).toString();
+        if (i < 7) {
+            var tempi = i;
+            d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
+              function(error, data) {
+                hour_weather = data.hourly.data[hour]
+                //should be the same
+                br = (hour_weather.windBearing - 90) % 360;
+                ws = hour_weather.windSpeed;
+                d.wind_bearing = br
+                d.wind_speed = ws
+                console.log(y(d.moving_time));
 
-      if (i < 7) {
-          var tempi = i;
-          d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
-            function(error, data) {
-              hour_weather = data.hourly.data[hour]
-              //should be the same
-              br = (hour_weather.windBearing - 90) % 360;
-              ws = hour_weather.windSpeed;
-              d.wind_bearing = br
-              d.wind_speed = ws
-              console.log(y(d.moving_time));
+                var triData = [ 
+                  { "x" : x(i + 1) - 20 * Math.cos((br + 90) * .0174544), 
+                    "y" : y(d.moving_time) - 20 * Math.sin((br + 90) * .0174544) }, 
+                  { "x" : x(i + 1) + 20 * Math.cos((br + 90) * .0174544),
+                    "y" : y(d.moving_time) + 20 * Math.sin((br + 90) * .0174544) },
+                  { "x" : x(i + 1) + d.wind_speed * -5 * Math.cos(d.wind_bearing * .0174533),
+                    "y" : y(d.moving_time) + d.wind_speed * -5 * Math.sin(d.wind_bearing * .0174533) }
+                  ];
 
-              var triData = [ 
-                { "x" : x(i + 1) - 20 * Math.cos((br + 90) * .0174544), 
-                  "y" : y(d.moving_time) - 20 * Math.sin((br + 90) * .0174544) }, 
-                { "x" : x(i + 1) + 20 * Math.cos((br + 90) * .0174544),
-                  "y" : y(d.moving_time) + 20 * Math.sin((br + 90) * .0174544) },
-                { "x" : x(i + 1) + d.wind_speed * -5 * Math.cos(d.wind_bearing * .0174533),
-                  "y" : y(d.moving_time) + d.wind_speed * -5 * Math.sin(d.wind_bearing * .0174533) }
-                ];
+                svg.append("circle")
+                  .attr("cx", x(i + 1))
+                  .attr("cy", y(d.moving_time))
+                  .attr("r", 18)
+                  .attr("fill", "white")
+                  .attr("class", "white-circ")
+                  .moveToBack();
 
-              svg.append("circle")
-                .attr("cx", x(i + 1))
-                .attr("cy", y(d.moving_time))
-                .attr("r", 18)
-                .attr("fill", "white")
-                .attr("class", "white-circ")
-                .moveToBack();
-
-              svg.append("path")
-                .attr("d", lineFunction(triData))
-                .attr("class", "wind-triangle")
-                .attr("stroke", "66CCCC")
-                .attr("stroke-width", 2)
-                .attr("fill", "#66CCCC")
-                .moveToBack();
-            })
-        }
-    })
-
-
-
-
-/*
-    data.entries.slice(0, 10).forEach( function(d, i) {
-      date = d.start_date_local;
-      hour = parseInt(date.substring(11, 13)).toString();
-
-      if (i < 2) {
-          var tempi = i;
-          d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
-            function(error, data) {
-              hour_weather = data.hourly.data[hour]
-
-              d.wind_bearing = (hour_weather.windBearing + 270) % 360;
-              d.wind_speed = hour_weather.windSpeed;
-              
-              svg.selectAll(".wind_line")
-                .filter( function(d, i) { return i === tempi })
-                .attr("y2", function(d) {
-                  console.log("changing y", d.wind_speed * -7 * Math.sin(d.wind_bearing * .0174533));
-                  return y(d.moving_time) + d.wind_speed * -7 * Math.sin(d.wind_bearing * .0174533);
-                })
-                .attr("x2", function(d) {
-                  return x(d.rank) + d.wind_speed * 7 * Math.cos(d.wind_bearing * .0174533);
-                })
-                .attr("display", "block");
-            })
-        }
-    })*/
+                svg.append("path")
+                  .attr("d", lineFunction(triData))
+                  .attr("class", "wind-triangle")
+                  .attr("stroke", "66CCCC")
+                  .attr("stroke-width", 2)
+                  .attr("fill", "#66CCCC")
+                  .moveToBack();
+              })
+          }
+      })
+    }
   });
 
   
