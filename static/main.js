@@ -1,7 +1,10 @@
 $(function() {
   drawGraph("2622759", "M", true, true);
 
+  var rand = document.getElementById('random');
+  rand.onclick = function () { updateGraph(true); }
 });
+
 
 function distance(lat1, lon1, lat2, lon2) {
   var rl1 = Math.PI * lat1/180;
@@ -33,6 +36,10 @@ function mousemove() {
       })
 }
 
+function showError() {
+  console.log("showing error");
+}
+
 String.prototype.toHHMMSS = function () {
     var sec_num = parseInt(this, 10); // don't forget the second param
     var hours   = Math.floor(sec_num / 3600);
@@ -46,8 +53,8 @@ String.prototype.toHHMMSS = function () {
 }
 
   var margin = {top: 20, right: 20, bottom: 50, left: 50},
-      width = 900 - margin.left - margin.right,
-      height = 500 - margin.top - margin.bottom;
+      width = 700 - margin.left - margin.right,
+      height = 460 - margin.top - margin.bottom;
 
   var y = d3.scale.linear()
     .range([0, height]);
@@ -224,10 +231,10 @@ function drawGraph(id, gender, heart_rate, wind) {
                 d.wind_speed = ws
 
                 var triData = [ 
-                  { "x" : x(i + 1) - 20 * Math.cos((br + 90) * .0174544), 
-                    "y" : y(d.moving_time) - 20 * Math.sin((br + 90) * .0174544) }, 
-                  { "x" : x(i + 1) + 20 * Math.cos((br + 90) * .0174544),
-                    "y" : y(d.moving_time) + 20 * Math.sin((br + 90) * .0174544) },
+                  { "x" : x(i + 1) - 18 * Math.cos((br + 90) * .0174544), 
+                    "y" : y(d.moving_time) - 18 * Math.sin((br + 90) * .0174544) }, 
+                  { "x" : x(i + 1) + 18 * Math.cos((br + 90) * .0174544),
+                    "y" : y(d.moving_time) + 18 * Math.sin((br + 90) * .0174544) },
                   { "x" : x(i + 1) + d.wind_speed * -5 * Math.cos(d.wind_bearing * .0174533),
                     "y" : y(d.moving_time) + d.wind_speed * -5 * Math.sin(d.wind_bearing * .0174533) }
                   ];
@@ -235,7 +242,7 @@ function drawGraph(id, gender, heart_rate, wind) {
                 svg.append("circle")
                   .attr("cx", x(i + 1))
                   .attr("cy", y(d.moving_time))
-                  .attr("r", 18)
+                  .attr("r", 16)
                   .attr("fill", "white")
                   .attr("class", "white-circ")
                   .moveToBack();
@@ -248,6 +255,7 @@ function drawGraph(id, gender, heart_rate, wind) {
                   .attr("fill", "#66CCCC")
                   .moveToBack();
 
+                svg.selectAll(".axis").moveToBack();
               })
           }
       })
@@ -255,11 +263,16 @@ function drawGraph(id, gender, heart_rate, wind) {
   });
 }
 
-function updateGraph() {
-  console.log("CALLED");
+function updateGraph(random) {
 
-  var id = d3.select("#segment-id")[0][0].value;
-  if (id === "") id =  "4302773"
+  if (random) {
+    id = "4302773"
+  } else {
+    var id = d3.select("#segment-id")[0][0].value;
+    if (id === "") {
+      showError();
+    }
+  }
 
   var gender = d3.select("input[name='gender']:checked")[0][0].value;
   var wind = d3.select("#wind-select")[0][0].checked;
@@ -276,6 +289,8 @@ function updateGraph() {
 
     var bear = bearing(lat1, lon1, lat2, lon2);
     var dist = distance(lat1, lon1, lat2, lon2);
+
+    d3.select("#segment-name").text(data.name);
   });
 
   d3.json("/leaderboard/" + id + "/" + gender, function(error, data) {
@@ -344,10 +359,9 @@ function updateGraph() {
         return x(i + 1);
       })
       .attr("cy", function(d) {
-        console.log(y(d.moving_time));
         return y(d.moving_time);
       })
-      .attr("r", 18)
+      .attr("r", 16)
       .attr("stroke", function() {
         if (wind) return "#66CCCC";
         else return "orange";
@@ -370,13 +384,12 @@ function updateGraph() {
                 ws = hour_weather.windSpeed;
                 d.wind_bearing = br
                 d.wind_speed = ws
-                console.log(y(d.moving_time));
 
                 var triData = [ 
-                  { "x" : x(i + 1) - 20 * Math.cos((br + 90) * .0174544), 
-                    "y" : y(d.moving_time) - 20 * Math.sin((br + 90) * .0174544) }, 
-                  { "x" : x(i + 1) + 20 * Math.cos((br + 90) * .0174544),
-                    "y" : y(d.moving_time) + 20 * Math.sin((br + 90) * .0174544) },
+                  { "x" : x(i + 1) - 18 * Math.cos((br + 90) * .0174544), 
+                    "y" : y(d.moving_time) - 18 * Math.sin((br + 90) * .0174544) }, 
+                  { "x" : x(i + 1) + 18 * Math.cos((br + 90) * .0174544),
+                    "y" : y(d.moving_time) + 18 * Math.sin((br + 90) * .0174544) },
                   { "x" : x(i + 1) + d.wind_speed * -5 * Math.cos(d.wind_bearing * .0174533),
                     "y" : y(d.moving_time) + d.wind_speed * -5 * Math.sin(d.wind_bearing * .0174533) }
                   ];
@@ -396,6 +409,8 @@ function updateGraph() {
                   .attr("stroke-width", 2)
                   .attr("fill", "#66CCCC")
                   .moveToBack();
+
+                svg.selectAll(".axis").moveToBack();
               })
           }
       })

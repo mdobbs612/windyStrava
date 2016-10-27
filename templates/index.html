@@ -12,16 +12,12 @@
     <script src={{ url_for('static', filename='./bower_components/d3/d3.min.js') }}></script>
     <script src={{ url_for('static', filename='main.js') }}></script>
 
-    <div id="top-bar">
-      <div class="title">
-        strava app 
-      </div>
-      <div class="powered-by">
-      </div>
-    </div>
     <div id="page-body">
       <div id="segment-graph">
         <div id="legend">
+          <div id="app-title">
+            <h1>windyStrava</h1>
+          </div>
           <div class="input-group">
             <span class="input-group-addon">Segment ID</span>
             <input type="text" id="segment-id" class="form-control">
@@ -29,24 +25,39 @@
               <button class="btn btn-default" onclick="updateGraph()">Go</button>
             </span>
           </div>
-          <div class="input-group">
-            <span class="input-group-addon">Gender</span>
-            <label class="radio-inline"><input type="radio" checked="checked" value="M" name="gender">Men</label>
-            <label class="radio-inline"><input type="radio" value="F" name="gender">Women</label>
+          <div class="random-group">
+            <span>OR </span>
+            <a id="random">click to view random segment</a>
           </div>
-          <div class="checkbox">
-            <label><input type="checkbox" name="wind-select" value="true">Display wind data</label>
+          <div id="display-settings">
+            <h4>Display settings:</h4>
+            <div class="input-group">
+              <label class="radio-inline"><input type="radio" checked="checked" value="M" name="gender">Men</label>
+              <label class="radio-inline"><input type="radio" value="F" name="gender">Women</label>
+            </div>
+            <div class="col1">
+              <div class="checkbox">
+                <label><input type="checkbox" id="wind-select" value="true">Wind</label>
+              </div>
+              <div class="checkbox">
+                <label><input type="checkbox" id="hr-select" value="">Heart Rate</label>
+              </div>
+            </div>
+            <div class="col2">
+              <div class="checkbox">
+                <label><input type="checkbox" name="watt-select" value="">Wattage</label>
+              </div>
+              <div class="checkbox">
+                <label><input type="checkbox" name="temp-select" value="">Temperature</label>
+              </div>
+            </div>
           </div>
-          <div class="checkbox">
-            <label><input type="checkbox" name="hr-select" value="">Display heart rate data</label>
-          </div>
-          <div class="checkbox">
-            <label><input type="checkbox" name="watt-select" value="">Display wattage data</label>
-          </div>
-        </div>
-        <div id="segment-name">
         </div>
         <div id="graph">
+          <div id="segment-name-area">
+            <h3 id="segment-name">
+            </h3>
+          </div>
         </div>
       </div>
       <div id="segment-map">
