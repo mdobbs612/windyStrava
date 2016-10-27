@@ -11,6 +11,8 @@
     <script src={{ url_for('static', filename='./bower_components/bootstrap/dist/js/bootstrap.min.js') }}></script>
     <script src={{ url_for('static', filename='./bower_components/d3/d3.min.js') }}></script>
     <script src={{ url_for('static', filename='main.js') }}></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyATm7MtKk178gAiyy9of9Du-8PJN54Tvbo&libraries=geometry">
+    </script>
 
     <div id="page-body">
       <div id="segment-graph">
@@ -52,6 +54,8 @@
               </div>
             </div>
           </div>
+          <div id="map">
+          </div>
         </div>
         <div id="graph">
           <div id="segment-name-area">
@@ -59,8 +63,6 @@
             </h3>
           </div>
         </div>
-      </div>
-      <div id="segment-map">
       </div>
     </div>
 

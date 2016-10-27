@@ -49,6 +49,7 @@ h3 {
 	display: inline-block;
 	margin-bottom: 12px;
 	margin-top: 12px;
+	font-size: 18px;
 }
 #page-body {
 	width: 100%;
@@ -92,4 +93,8 @@ h3 {
 
 #random {
 	cursor: pointer;
+}
+
+#map {
+	height: 280px;
 }

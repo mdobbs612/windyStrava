@@ -92,6 +92,66 @@ String.prototype.toHHMMSS = function () {
         });
     };
 
+function zoomToObject(obj){
+    var bounds = new google.maps.LatLngBounds();
+    var points = obj.getPath().getArray();
+    for (var n = 0; n < points.length ; n++){
+        bounds.extend(points[n]);
+    }
+    map.fitBounds(bounds);
+}
+
+function drawMap(lat1, lon1, lat2, lon2, polyline) {
+  console.log("calling initMap");
+  var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 12,
+          center: {lat: lat1, lng: lon1},
+          mapTypeId: 'terrain'
+    });
+
+  var endMark = new google.maps.Marker({
+    position: {lat: lat2, lng: lon2},
+    icon: {
+      url: "/static/polyline_end.png",
+      size: new google.maps.Size(30, 30),
+      origin: new google.maps.Point(0, 0),
+      anchor: new google.maps.Point(7.5, 7.5),
+      scaledSize: new google.maps.Size(15, 15)
+    },
+    map: map
+  });
+
+  var startMark = new google.maps.Marker({
+    position: {lat: lat1, lng: lon1},
+    icon: {
+      url: "/static/polyline_start.png",
+      size: new google.maps.Size(30, 30),
+      origin: new google.maps.Point(0, 0),
+      anchor: new google.maps.Point(5, 5),
+      scaledSize: new google.maps.Size(10, 10)
+    },
+    map: map
+  });
+
+    var path = new google.maps.Polyline({
+      path: google.maps.geometry.encoding.decodePath(polyline),
+      geodesic: true,
+      strokeColor: "#FF0000",
+      strokeOpacity: 1.0,
+      strokeWeight: 2
+    });
+
+    path.setMap(map);
+
+    var bounds = new google.maps.LatLngBounds();
+    var points = path.getPath().getArray();
+    for (var n = 0; n < points.length ; n++){
+        bounds.extend(points[n]);
+    }
+    map.fitBounds(bounds);
+}
+
+
 function drawGraph(id, gender, heart_rate, wind) {
   var svg = d3.select("svg");
 
@@ -104,8 +164,6 @@ function drawGraph(id, gender, heart_rate, wind) {
 
   var defs = svg.append("defs").attr("id", "imgdefs")
 
-  var lat1, lat2, lon1, lon2;
-
   d3.json("/segment/" + id, function(error, data) {
     lat1 = data.start_latitude
     lat2 = data.end_latitude
@@ -115,6 +173,8 @@ function drawGraph(id, gender, heart_rate, wind) {
     var dist = distance(lat1, lon1, lat2, lon2);
 
     d3.select("#segment-name").text(data.name);
+
+    drawMap(lat1, lon1, lat2, lon2, data.map.polyline);
   });
 
 
@@ -291,6 +351,9 @@ function updateGraph(random) {
     var dist = distance(lat1, lon1, lat2, lon2);
 
     d3.select("#segment-name").text(data.name);
+
+    drawMap(lat1, lon1, lat2, lon2, data.map.polyline);
+
   });
 
   d3.json("/leaderboard/" + id + "/" + gender, function(error, data) {
