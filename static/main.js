@@ -3,7 +3,6 @@ $(document).ready( function() {
   var rand = document.getElementById('random');
   rand.onclick = function () { updateGraph(true); }
 
-
   function distance(lat1, lon1, lat2, lon2) {
     var rl1 = Math.PI * lat1/180;
     var rl2 = Math.PI * lat2/180;
@@ -11,6 +10,15 @@ $(document).ready( function() {
     var dist = Math.acos( Math.sin(rl1) * Math.sin(rl2) + Math.cos(rl1) * Math.cos(rl2) * Math.cos(theta));
     dist = dist * 180/Math.PI * 60 * 1.1515 * 1.609344;
     return dist;
+  }
+
+  function windDirection(bearing) {
+    if (bearing) {
+      if (bearing > 0) return "N"
+    } else {
+      return "--"
+    }
+    
   }
 
   function bearing(lat1, lon1, lat2, lon2) {
@@ -27,11 +35,21 @@ $(document).ready( function() {
   function mousemove() {
       var rank = Math.round(x.invert(d3.mouse(this)[0]) - 1.75);
 
-      circle = d3.selectAll('circle')
-        .attr("r" , function(d, i) {
-          if (i == rank) return 22;
-          else return 18;
+      infos = d3.selectAll('.effort-info')
+        .attr("display" , function(d, i) {
+          if (i == rank) {
+            return "block";
+          }
+          else return "none";
         })
+
+      wind_display = d3.selectAll('.effort-info')
+        .filter( function(d, i) {
+          return (i == rank)
+        });
+
+      console.log(wind_display);
+
   }
 
   function showError() {
@@ -39,7 +57,7 @@ $(document).ready( function() {
   }
 
   String.prototype.toHHMMSS = function () {
-      var sec_num = parseInt(this, 10); // don't forget the second param
+      var sec_num = parseInt(this, 10); 
       var hours   = Math.floor(sec_num / 3600);
       var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
       var seconds = sec_num - (hours * 3600) - (minutes * 60);
@@ -48,15 +66,11 @@ $(document).ready( function() {
       return minutes+':'+seconds;
   }
 
-
-
   var margin = {top: 20, right: 20, bottom: 50, left: 50},
       graphw = d3.select('#graph').node().getBoundingClientRect().width - 10,
       graphh = d3.select('#graph').node().getBoundingClientRect().height - 45, 
       width = graphw - margin.right - margin.left,
       height = graphh - margin.top - margin.bottom;
-
-  console.log(graphh);
 
   var y = d3.scale.linear()
     .range([0, height]);
@@ -104,7 +118,6 @@ $(document).ready( function() {
   }
 
   function drawMap(lat1, lon1, lat2, lon2, polyline) {
-    console.log("calling initMap");
     var map = new google.maps.Map(document.getElementById('map'), {
             zoom: 12,
             center: {lat: lat1, lng: lon1},
@@ -135,22 +148,22 @@ $(document).ready( function() {
       map: map
     });
 
-      var path = new google.maps.Polyline({
-        path: google.maps.geometry.encoding.decodePath(polyline),
-        geodesic: true,
-        strokeColor: "#FF0000",
-        strokeOpacity: 1.0,
-        strokeWeight: 2
-      });
+    var path = new google.maps.Polyline({
+      path: google.maps.geometry.encoding.decodePath(polyline),
+      geodesic: true,
+      strokeColor: "#FF0000",
+      strokeOpacity: 1.0,
+      strokeWeight: 2
+    });
 
-      path.setMap(map);
+    path.setMap(map);
 
-      var bounds = new google.maps.LatLngBounds();
-      var points = path.getPath().getArray();
-      for (var n = 0; n < points.length ; n++){
-          bounds.extend(points[n]);
-      }
-      map.fitBounds(bounds);
+    var bounds = new google.maps.LatLngBounds();
+    var points = path.getPath().getArray();
+    for (var n = 0; n < points.length ; n++){
+        bounds.extend(points[n]);
+    }
+    map.fitBounds(bounds);
   }
 
   function drawGraph(id, gender, heart_rate, wind) {
@@ -232,7 +245,8 @@ $(document).ready( function() {
         .data(ldr_data.entries.slice(0, 10))
         .enter()
         .append("circle")
-        .attr("class", ".prof-circ")
+        .attr("class", "prof-circ")
+        .attr("r", 16)
         .attr("cx", function(d, i) {
           return x(i + 1);
         })
@@ -247,6 +261,35 @@ $(document).ready( function() {
           if (wind) return "#66CCCC";
           else return "orange";
         });
+
+      effortInfo = svg.selectAll(".effort-info")
+        .data(ldr_data.entries.slice(0, 10))
+        .enter()
+        .append("g")
+          .attr("display", "none")
+          .attr("transform", function(d, i) {
+            if (i < 5) {
+              return "translate(" + (x(i + 1) + 20) + ',' + (y(d.moving_time) - 30) + ")"
+            } else {
+              return "translate(" + (x(i + 1) - 220) + ',' + (y(d.moving_time) - 30) + ")"
+            }
+          })
+        .attr("class", "effort-info")
+        .append("rect")
+          .attr("rx", 3)
+          .attr("ry", 3)
+          .attr("width", 200)
+          .attr("height", 60)
+          .attr("fill", "white")
+          .attr("stroke", "#7f7f7f")
+        .append("div")
+          .attr("html", function(d) {
+            name = d.name;
+            time = d.moving_time
+            wind = windDirection(d.wind_bearing)
+            console.log(wind);
+            return ""
+          });
 
 
       // add hearts for heart rate readings, only display if heart-rate
@@ -289,6 +332,7 @@ $(document).ready( function() {
                   br = (hour_weather.windBearing - 90) % 360;
                   ws = hour_weather.windSpeed;
                   d.wind_bearing = br
+                  console.log(d.wind_bearing);
                   d.wind_speed = ws
 
                   var triData = [ 
@@ -462,7 +506,7 @@ $(document).ready( function() {
                   svg.append("circle")
                     .attr("cx", x(i + 1))
                     .attr("cy", y(d.moving_time))
-                    .attr("r", 18)
+                    .attr("r", 16)
                     .attr("fill", "white")
                     .attr("class", "white-circ")
                     .moveToBack();

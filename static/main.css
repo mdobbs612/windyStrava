@@ -36,10 +36,6 @@ svg {
 	font-family: sans-serif;
 }
 
-circle {
-	
-	r: 16px;
-}
 
 body {
 	min-width: 1150px;
@@ -51,6 +47,12 @@ h3 {
 	margin-top: 12px;
 	font-size: 18px;
 }
+
+h1 {
+	text-align: center;
+	margin-top: 0px;
+}
+
 #page-body {
 	width: 100%;
 	min-width: 1150px;
