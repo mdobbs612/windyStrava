@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>windyStrava</title>
+    <title>Strava+wind</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href={{ url_for('static', filename='./bower_components/bootstrap/dist/css/bootstrap.min.css') }} rel="stylesheet" media="screen">
     <link href={{ url_for('static', filename='main.css') }} rel="stylesheet" media="screen">
@@ -18,7 +18,10 @@
       <div id="segment-graph">
         <div id="legend">
           <div id="app-title">
-            <h1>windyStrava</h1>
+            <img src="/static/title.png" alt="STRAVA+wind">
+            <div id="app-description">
+            Compare wind speeds for the top times on any Strava segment
+            </div>
           </div>
           <div class="input-group">
             <span class="input-group-addon">Segment ID</span>
@@ -27,41 +30,22 @@
               <button class="btn btn-default" onclick="updateGraph()">Go</button>
             </span>
           </div>
+          <div class="input-group gender">
+              <label class="radio-inline"><input type="radio" checked="checked" value="M" name="gender">Men</label>
+              <label class="radio-inline"><input type="radio" value="F" name="gender">Women</label>
+            </div>
           <div class="random-group">
             <span>OR </span>
             <a id="random">click to view random segment</a>
           </div>
-          <div id="display-settings">
-            <h4>Display settings:</h4>
-            <div class="input-group">
-              <label class="radio-inline"><input type="radio" checked="checked" value="M" name="gender">Men</label>
-              <label class="radio-inline"><input type="radio" value="F" name="gender">Women</label>
-            </div>
-            <div class="col1">
-              <div class="checkbox">
-                <label><input type="checkbox" id="wind-select" value="true">Wind</label>
-              </div>
-              <div class="checkbox">
-                <label><input type="checkbox" id="hr-select" value="">Heart Rate</label>
-              </div>
-            </div>
-            <div class="col2">
-              <div class="checkbox">
-                <label><input type="checkbox" name="watt-select" value="">Wattage</label>
-              </div>
-              <div class="checkbox">
-                <label><input type="checkbox" name="temp-select" value="">Temperature</label>
-              </div>
-            </div>
-          </div>
-          <h4>Segment map:</h4>
+          <h4 id="map-title">Segment map:</h4>
           <div id="map">
           </div>
         </div>
         <div id="graph">
           <div id="segment-name-area">
-            <h3 id="segment-name">
-            </h3>
+            <a id="segment-name" target="_blank">
+            </a>
           </div>
         </div>
       </div>

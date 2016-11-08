@@ -20,6 +20,21 @@ svg {
 	background-color: orange;
 }
 
+#app-title {
+	margin-bottom: 5px;
+}
+
+#app-title img {
+	width: 265px;
+}
+
+#app-description {
+	text-align: center;
+	font-size: 12px;
+	padding: 10px;
+	padding-top: 0px;
+}
+
 #top-bar .title {
 	color: black;
 	font-size: 30px;
@@ -39,13 +54,6 @@ svg {
 
 body {
 	min-width: 1150px;
-}
-
-h3 {
-	display: inline-block;
-	margin-bottom: 12px;
-	margin-top: 12px;
-	font-size: 18px;
 }
 
 h1 {
@@ -85,6 +93,14 @@ h1 {
 	color: white;
 }
 
+#segment-name {
+	display: inline-block;
+	margin-bottom: 12px;
+	margin-top: 12px;
+	font-size: 18px;
+	color: white;
+}
+
 .col1, .col2 {
 	width: 49%;
 	display: inline-block;
@@ -95,10 +111,20 @@ h1 {
 	margin-top: 5px;
 }
 
+div.input-group.gender {
+	margin: auto;
+	margin-top: 4px;
+	text-align: center;
+}
+
 #random {
 	cursor: pointer;
 }
 
 #map {
 	height: 280px;
+}
+
+#map-title {
+	margin-top: 40px;
 }
