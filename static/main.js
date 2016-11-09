@@ -1,7 +1,15 @@
 $(document).ready( function() {
 
   var rand = document.getElementById('random');
-  rand.onclick = function () { updateGraph(true); }
+  rand.onclick = function () { 
+    var gender = d3.select("input[name='gender']:checked")[0][0].value;
+    updateGraph(true, gender); }
+
+  var go = document.getElementById('go-button');
+  go.onclick = function () {
+    var gender = d3.select("input[name='gender']:checked")[0][0].value;
+    updateGraph(false, gender);
+  }
 
   function distance(lat1, lon1, lat2, lon2) {
     var rl1 = Math.PI * lat1/180;
@@ -49,7 +57,7 @@ $(document).ready( function() {
 
       infos = d3.selectAll('.effort-info')
         .transition()
-          .duration(1000)
+          .duration(500)
         .attr("display" , function(d, i) {
           if (i == rank) {
             return "block";
@@ -139,6 +147,101 @@ $(document).ready( function() {
       map.fitBounds(bounds);
   }
 
+  function drawEffortInfo(data, svg) {
+    svg.selectAll(".effort-info").remove()
+
+    effortInfo = svg.selectAll(".effort-info")
+      .data(data.entries.slice(0, 10))
+      .enter()
+      .append("g")
+        .attr("display", "none")
+        .attr("transform", function(d, i) {
+          if (i < 5) {
+            return "translate(" + (x(i + 1) + 15) + ',' + (y(d.elapsed_time) - 10) + ")"
+          } else {
+            return "translate(" + (x(i + 1) - 165) + ',' + (y(d.elapsed_time) - 10) + ")"
+          }
+        })
+      .attr("class", "effort-info");
+
+    effortInfo.append("rect")
+        .attr("width", 150)
+        .attr("height", 20)
+        .attr("fill", "#FC4C02");
+    effortInfo.append("circle")
+        .attr("cx", function(d, i) {
+          if (i < 5) return -15
+          else return 165
+        })
+        .attr("cy", 10)
+        .attr("r", 16)
+        .attr("stroke-width", 3)
+        .attr("stroke", "#FC4C02")
+        .attr("fill", "none");
+    effortInfo.append("rect")
+        .attr("width", 135)
+        .attr("height", 36)
+        .attr("transform", function(d, i) {
+          if (i < 5) return "translate(15, 20)"
+          else return "translate(0, 20)"
+        })
+        .attr("fill", "white")
+        .attr("stroke", "#fedccd")
+        .attr("stroke-width", 1);
+    effortInfo.append("image")
+      .attr("class", "effort-wind-icon")
+      .attr("xlink:href", "/static/wind.png")
+      .attr("height", "15")
+      .attr("width", "15")
+      .attr("x", function(d, i) {
+          if (i < 5) return 20
+          else return 5 })
+      .attr("y", 40);
+    effortInfo.append("text")
+        .attr("class", "effort-wind")
+        .text( function (d) {
+          return windDirection(d.wind_bearing)
+        })
+        .attr("fill", "black")
+        .attr("x", function(d, i) {
+          if (i < 5) return 40
+          else return 25 })
+        .attr("y", 51);
+    effortInfo.append("text")
+        .text( function (d) {
+          return d.athlete_name.slice(0, 15);
+        })
+        .attr("fill", "white")
+        .attr("text-anchor", function(d, i) {
+          if (i < 5) return "end"
+          else return "begin"
+        })
+        .attr("y", 15)
+        .attr("x", function(d, i) {
+          if (i < 5) return 145
+          else return 5
+        });
+    effortInfo.append("image")
+        .attr("class", "effort-wind-icon")
+        .attr("xlink:href", "/static/timer.png")
+        .attr("height", "15")
+        .attr("width", "15")
+        .attr("x", function(d, i) {
+          if (i < 5) return 20
+          else return 5 })
+        .attr("y", 22);
+    effortInfo.append("text")
+        .text( function (d) {
+          return d.elapsed_time.toString().toHHMMSS();
+        })
+        .attr("fill", "black")
+        .attr("y", 33)
+        .attr("x", function(d, i) {
+          if (i < 5) return 40
+          else return 25 });
+  }
+
+
   function drawMap(lat1, lon1, lat2, lon2, polyline) {
     var map = new google.maps.Map(document.getElementById('map'), {
             zoom: 12,
@@ -200,533 +303,350 @@ $(document).ready( function() {
 
     var defs = svg.append("defs").attr("id", "imgdefs")
 
-    d3.json("/segment/" + id, function(error, data) {
-      lat1 = data.start_latitude
-      lat2 = data.end_latitude
-      lon1 = data.start_longitude
-      lon2 = data.end_longitude
+    d3.json("/segment/" + id, function(error, segment_data) {
+      console.log("SEGMENT DATA", segment_data);
+      lat1 = segment_data.start_latitude
+      lat2 = segment_data.end_latitude
+      lon1 = segment_data.start_longitude
+      lon2 = segment_data.end_longitude
       var bear = bearing(lat1, lon1, lat2, lon2);
       var dist = distance(lat1, lon1, lat2, lon2);
 
       d3.select("#segment-name")
-          .text(data.name)
+          .text(segment_data.name)
           .attr("href", "https://www.strava.com/segments/" + id)
 
-      drawMap(lat1, lon1, lat2, lon2, data.map.polyline);
-    });
+      drawMap(lat1, lon1, lat2, lon2, segment_data.map.polyline);
 
+      d3.json("/leaderboard/" + id + "/" + "F", function(error, data) {
+        console.log(data);
 
-    d3.json("/leaderboard/" + id + "/" + gender, function(error, data) {
-      console.log(data);
+        var ldr_data = data;
 
-      var ldr_data = data;
+        var minTime = ldr_data.entries[0].elapsed_time;
+        var maxTime = ldr_data.entries[9].elapsed_time;
 
-      var minTime = ldr_data.entries[0].elapsed_time;
-      var maxTime = ldr_data.entries[9].elapsed_time;
-
-      // get list of heart rates
-      var hrs = ldr_data.entries.map(function (d) {
-        return d.average_hr;
-      })
-
-      var timeMargin = (maxTime - minTime) / 10
-
-      x.domain([0, 11]);
-      y.domain([maxTime + timeMargin, minTime - timeMargin]);
-      yhr.domain([d3.min(hrs) - 20, d3.max(hrs) + 20])
-
-      // create pattern for each profile picure to be applied to svg circles
-      ldr_data.entries.forEach( function(d, i) {
-        defs.append("pattern")
-          .attr("id", "prof_pic_" + i)
-          .attr("height", 1)
-          .attr("width", 1)
-          .attr("x", "0")
-          .attr("y", "0")
-          .append("image")
-          .attr("width", 36)
-          .attr("height", 36)
-          .attr("xlink:href", function() {
-            if (d.athlete_profile != "avatar/athlete/large.png") {
-              return d.athlete_profile ;
-            } else return "static/avatar.png";
-          });
-      }); 
-
-      // x axis
-      svg.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(xAxis);
-
-      // y axis
-      svg.append("g")
-        .attr("class", "y axis")
-        .call(yAxis);
-
-      // draw prfile picture circles for time data points
-      circles = svg.selectAll("circle")
-        .data(ldr_data.entries.slice(0, 10))
-        .enter()
-        .append("circle")
-        .attr("class", "prof-circ")
-        .attr("r", 16)
-        .attr("cx", function(d, i) {
-          return x(i + 1);
+        // get list of heart rates
+        var hrs = ldr_data.entries.map(function (d) {
+          return d.average_hr;
         })
-        .attr("cy", function(d) {
-          return y(d.elapsed_time);
-        })
-        .attr("fill", function (d, i) {
-          return "url(#prof_pic_" + i + " )"
-        })
-        .attr("stroke-width",  "3px")
-        .attr("stroke", function() {
-          if (wind) return "#98AFC7";
-          else return "orange";
-        });
 
-      effortInfo = svg.selectAll(".effort-info")
-        .data(ldr_data.entries.slice(0, 10))
-        .enter()
-        .append("g")
-          .attr("display", "none")
-          .attr("transform", function(d, i) {
-            if (i < 5) {
-              return "translate(" + (x(i + 1) + 15) + ',' + (y(d.elapsed_time) - 10) + ")"
-            } else {
-              return "translate(" + (x(i + 1) - 165) + ',' + (y(d.elapsed_time) - 10) + ")"
-            }
-          })
-        .attr("class", "effort-info");
+        var timeMargin = (maxTime - minTime) / 10
 
-      effortInfo.append("rect")
-          .attr("width", 150)
-          .attr("height", 20)
-          .attr("fill", "#FC4C02");
-      effortInfo.append("circle")
-          .attr("cx", function(d, i) {
-            if (i < 5) return -15
-            else return 165
-          })
-          .attr("cy", 10)
+        x.domain([0, 11]);
+        y.domain([maxTime + timeMargin, minTime - timeMargin]);
+        yhr.domain([d3.min(hrs) - 20, d3.max(hrs) + 20])
+
+        // create pattern for each profile picure to be applied to svg circles
+        ldr_data.entries.forEach( function(d, i) {
+          defs.append("pattern")
+            .attr("id", "prof_pic_" + i)
+            .attr("height", 1)
+            .attr("width", 1)
+            .attr("x", "0")
+            .attr("y", "0")
+            .append("image")
+            .attr("width", 36)
+            .attr("height", 36)
+            .attr("xlink:href", function() {
+              if (d.athlete_profile != "avatar/athlete/large.png") {
+                return d.athlete_profile ;
+              } else return "static/avatar.png";
+            });
+        }); 
+
+        // x axis
+        svg.append("g")
+          .attr("class", "x axis")
+          .attr("transform", "translate(0," + height + ")")
+          .call(xAxis);
+
+        // y axis
+        svg.append("g")
+          .attr("class", "y axis")
+          .call(yAxis);
+
+        // draw prfile picture circles for time data points
+        circles = svg.selectAll("circle")
+          .data(ldr_data.entries.slice(0, 10))
+          .enter()
+          .append("circle")
+          .attr("class", "prof-circ")
           .attr("r", 16)
-          .attr("stroke-width", 3)
-          .attr("stroke", "#FC4C02")
-          .attr("fill", "none");
-      effortInfo.append("rect")
-          .attr("width", 135)
-          .attr("height", 36)
-          .attr("transform", function(d, i) {
-            if (i < 5) return "translate(15, 20)"
-            else return "translate(0, 20)"
+          .attr("cx", function(d, i) {
+            return x(i + 1);
           })
-          .attr("fill", "white")
-          .attr("stroke", "#fedccd")
-          .attr("stroke-width", 1);
-      effortInfo.append("image")
-        .attr("class", "effort-wind-icon")
-        .attr("xlink:href", "/static/wind.png")
-        .attr("height", "15")
-        .attr("width", "15")
-        .attr("x", function(d, i) {
-            if (i < 5) return 20
-            else return 5 })
-        .attr("y", 40);
-      effortInfo.append("text")
-          .attr("class", "effort-wind")
-          .text( function (d) {
-            return windDirection(d.wind_bearing)
+          .attr("cy", function(d) {
+            return y(d.elapsed_time);
           })
-          .attr("fill", "black")
-          .attr("x", function(d, i) {
-            if (i < 5) return 40
-            else return 25 })
-          .attr("y", 51);
-      effortInfo.append("text")
-          .text( function (d) {
-            return d.athlete_name.slice(0, 15);
+          .attr("fill", function (d, i) {
+            return "url(#prof_pic_" + i + " )"
           })
-          .attr("fill", "white")
-          .attr("text-anchor", function(d, i) {
-            if (i < 5) return "end"
-            else return "begin"
-          })
-          .attr("y", 15)
-          .attr("x", function(d, i) {
-            if (i < 5) return 145
-            else return 5
+          .attr("stroke-width",  "3px")
+          .attr("stroke", function() {
+            if (wind) return "#98AFC7";
+            else return "orange";
           });
-      effortInfo.append("image")
-          .attr("class", "effort-wind-icon")
-          .attr("xlink:href", "/static/timer.png")
-          .attr("height", "15")
-          .attr("width", "15")
-          .attr("x", function(d, i) {
-            if (i < 5) return 20
-            else return 5 })
-          .attr("y", 22);
-      effortInfo.append("text")
-          .text( function (d) {
-            return d.elapsed_time.toString().toHHMMSS();
+
+        drawEffortInfo(ldr_data, svg);
+
+        // add hearts for heart rate readings, only display if heart-rate
+        svg.selectAll(".hr")
+          .data(ldr_data.entries.slice(0, 10))
+          .enter()
+          .append("image")
+          .attr("class", "hr")
+          .attr("xlink:href", "/static/heart90.png")
+          .attr("x", function(d, i) { return x(i + 1) - 14; })
+          .attr("y", function(d) { return yhr(d.average_hr) + 14; })
+          .attr("display", function() { if (heart_rate) return "block" 
+                                        else return "none"});
+
+        // add text labels for heart rates, only display if heart-rate
+        svg.selectAll(".hr .txt")
+          .data(ldr_data.entries.slice(0, 10))
+          .enter()
+          .append("text")
+          .attr("class", "hr txt")
+          .attr("x", function(d, i) { return x(i + 1) - 11; })
+          .attr("y", function(d) { return yhr(d.average_hr) + 31; })
+          .text(function(d, i) { return Math.round(d.average_hr) })
+          .attr("display", function() { if (heart_rate) return "block" 
+                                        else return "none"});
+
+        svg.selectAll(".white-circ").remove();
+
+        if (wind) {
+          ldr_data.entries.slice(0, 10).forEach( function(d, i) {
+            date = d.start_date_local;
+            hour = parseInt(date.substring(11, 13)).toString();
+
+            if (i < 3) {
+                var tempi = i;
+                d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
+                  function(error, data) {
+                    hour_weather = data.hourly.data[hour]
+
+                    br = (hour_weather.windBearing - 90) % 360;
+                    ws = hour_weather.windSpeed;
+                    d.wind_bearing = br
+                    d.wind_speed = ws
+
+                    var triData = [ 
+                      { "x" : x(i + 1) - 18 * Math.cos((br + 90) * .0174544), 
+                        "y" : y(d.elapsed_time) - 18 * Math.sin((br + 90) * .0174544) }, 
+                      { "x" : x(i + 1) + 18 * Math.cos((br + 90) * .0174544),
+                        "y" : y(d.elapsed_time) + 18 * Math.sin((br + 90) * .0174544) },
+                      { "x" : x(i + 1) + (d.wind_speed * -5 - 18) * Math.cos(d.wind_bearing * .0174533),
+                        "y" : y(d.elapsed_time) + (d.wind_speed * -5 - 18) * Math.sin(d.wind_bearing * .0174533) }
+                      ];
+
+                    svg.append("circle")
+                      .attr("cx", x(i + 1))
+                      .attr("cy", y(d.elapsed_time))
+                      .attr("r", 16)
+                      .attr("fill", "white")
+                      .attr("class", "white-circ")
+                      .moveToBack();
+
+                    svg.append("path")
+                      .attr("d", lineFunction(triData))
+                      .attr("class", "wind-triangle")
+                      .attr("stroke", "98AFC7")
+                      .attr("stroke-width", 2)
+                      .attr("fill", "#98AFC7")
+                      .moveToBack();
+
+                    svg.selectAll(".axis").moveToBack();
+
+                    svg.selectAll(".effort-wind")
+                      .filter( function(d, i) {
+                        return i == tempi
+                      })
+                      .text( function(d) {
+                        return toMPH(d.wind_speed) + " " + windDirection(d.wind_bearing + 90);
+                      });
+
+                  })
+              }
           })
-          .attr("fill", "black")
-          .attr("y", 33)
-          .attr("x", function(d, i) {
-            if (i < 5) return 40
-            else return 25 });
-        /*
-        .append("div")
-          .html( function(d) {
-            name = d.name;
-            time = d.elapsed_time
-            wind = windDirection(d.wind_bearing)
-            console.log(wind);
-            return wind
-          });*/
-
-
-      // add hearts for heart rate readings, only display if heart-rate
-      svg.selectAll(".hr")
-        .data(ldr_data.entries.slice(0, 10))
-        .enter()
-        .append("image")
-        .attr("class", "hr")
-        .attr("xlink:href", "/static/heart90.png")
-        .attr("x", function(d, i) { return x(i + 1) - 14; })
-        .attr("y", function(d) { return yhr(d.average_hr) + 14; })
-        .attr("display", function() { if (heart_rate) return "block" 
-                                      else return "none"});
-
-      // add text labels for heart rates, only display if heart-rate
-      svg.selectAll(".hr .txt")
-        .data(ldr_data.entries.slice(0, 10))
-        .enter()
-        .append("text")
-        .attr("class", "hr txt")
-        .attr("x", function(d, i) { return x(i + 1) - 11; })
-        .attr("y", function(d) { return yhr(d.average_hr) + 31; })
-        .text(function(d, i) { return Math.round(d.average_hr) })
-        .attr("display", function() { if (heart_rate) return "block" 
-                                      else return "none"});
-
-      svg.selectAll(".white-circ").remove();
-
-      if (wind) {
-        ldr_data.entries.slice(0, 10).forEach( function(d, i) {
-          date = d.start_date_local;
-          hour = parseInt(date.substring(11, 13)).toString();
-
-          if (i < 13) {
-              var tempi = i;
-              d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
-                function(error, data) {
-                  hour_weather = data.hourly.data[hour]
-
-                  br = (hour_weather.windBearing - 90) % 360;
-                  ws = hour_weather.windSpeed;
-                  d.wind_bearing = br
-                  d.wind_speed = ws
-
-                  var triData = [ 
-                    { "x" : x(i + 1) - 18 * Math.cos((br + 90) * .0174544), 
-                      "y" : y(d.elapsed_time) - 18 * Math.sin((br + 90) * .0174544) }, 
-                    { "x" : x(i + 1) + 18 * Math.cos((br + 90) * .0174544),
-                      "y" : y(d.elapsed_time) + 18 * Math.sin((br + 90) * .0174544) },
-                    { "x" : x(i + 1) + (d.wind_speed * -5 - 18) * Math.cos(d.wind_bearing * .0174533),
-                      "y" : y(d.elapsed_time) + (d.wind_speed * -5 - 18) * Math.sin(d.wind_bearing * .0174533) }
-                    ];
-
-                  svg.append("circle")
-                    .attr("cx", x(i + 1))
-                    .attr("cy", y(d.elapsed_time))
-                    .attr("r", 16)
-                    .attr("fill", "white")
-                    .attr("class", "white-circ")
-                    .moveToBack();
-
-                  svg.append("path")
-                    .attr("d", lineFunction(triData))
-                    .attr("class", "wind-triangle")
-                    .attr("stroke", "98AFC7")
-                    .attr("stroke-width", 2)
-                    .attr("fill", "#98AFC7")
-                    .moveToBack();
-
-                  svg.selectAll(".axis").moveToBack();
-
-                  svg.selectAll(".effort-wind")
-                    .filter( function(d, i) {
-                      return i == tempi
-                    })
-                    .text( function(d) {
-                      return toMPH(d.wind_speed) + " " + windDirection(d.wind_bearing + 90);
-                    });
-
-                })
-            }
-        })
       }
     });
+
+  });
   };
 
-  function updateGraph(random) {
+  function updateGraph(random, gender) {
 
     if (random) {
       id = getRandomSegment();
     } else {
       var id = d3.select("#segment-id")[0][0].value;
+      var gender = d3.select("input[name='gender']:checked")[0][0].value;
       if (id === "") {
         showError();
       }
     }
 
-    var gender = d3.select("input[name='gender']:checked")[0][0].value;
+    
+    console.log(gender);
     var wind = true //d3.select("#wind-select")[0][0].checked;
     var heart_rate = false //d3.select("#hr-select")[0][0].checked;
     var svg = d3.select("body").select("svg").select("g");
 
     var lat1, lat2, lon1, lon2;
 
-    d3.json("/segment/" + id, function(error, data) {
-      lat1 = data.start_latitude;
-      lon1 = data.start_longitude;
-      lat2 = data.end_latitude;
-      lon2 = data.end_longitude;
+    d3.json("/segment/" + id, function(error, segment_data) {
+      console.log("SEGMENT DATA", segment_data);
+
+      lat1 = segment_data.start_latitude;
+      lon1 = segment_data.start_longitude;
+      lat2 = segment_data.end_latitude;
+      lon2 = segment_data.end_longitude;
 
       var bear = bearing(lat1, lon1, lat2, lon2);
       var dist = distance(lat1, lon1, lat2, lon2);
 
-      d3.select("#segment-name").text(data.name);
+      d3.select("#segment-name").text(segment_data.name);
 
-      drawMap(lat1, lon1, lat2, lon2, data.map.polyline);
+      drawMap(lat1, lon1, lat2, lon2, segment_data.map.polyline);
+      var g = d3.select("input[name='gender']:checked")[0][0].value;
+      console.log("second", gender);
+      d3.json("/leaderboard/" + id + "/" + "F", function(error, data) {
+        console.log(data, gender);
+        var minTime = data.entries[0].moving_time;
+        var maxTime = data.entries[9].moving_time;
 
-    });
+        var hrs = data.entries.map(function (d) {
+          return d.average_hr;
+        });
 
-    d3.json("/leaderboard/" + id + "/" + gender, function(error, data) {
-      console.log(data);
-      var minTime = data.entries[0].moving_time;
-      var maxTime = data.entries[9].moving_time;
+        var timeMargin = (maxTime - minTime) / 8;
 
-      var hrs = data.entries.map(function (d) {
-        return d.average_hr;
-      });
+        y.domain([maxTime + timeMargin, minTime - timeMargin]);
+        yhr.domain([d3.min(hrs) - 20, d3.max(hrs) + 20]);
 
-      var timeMargin = (maxTime - minTime) / 8;
+        svg.selectAll(".wind-triangle").remove();
 
-      y.domain([maxTime + timeMargin, minTime - timeMargin]);
-      yhr.domain([d3.min(hrs) - 20, d3.max(hrs) + 20]);
+        svg.select(".y.axis")
+          .call(yAxis);
 
-      svg.selectAll(".wind-triangle").remove();
+        data.entries.forEach( function(d, i) {
+          d3.select("#prof_pic_" + i + " image")
+            .attr("xlink:href", function() {
+              if (d.athlete_profile != "avatar/athlete/large.png") {
+                return d.athlete_profile ;
+              } else return "static/avatar.png";
+            });
+        });
 
-      svg.select(".y.axis")
-        .call(yAxis);
+        drawEffortInfo(data, svg);
 
-      data.entries.forEach( function(d, i) {
-        d3.select("#prof_pic_" + i + " image")
-          .attr("xlink:href", function() {
-            if (d.athlete_profile != "avatar/athlete/large.png") {
-              return d.athlete_profile ;
-            } else return "static/avatar.png";
-          });
-      });
-
-      svg.selectAll(".effort-info").remove()
-
-      effortInfo = svg.selectAll(".effort-info")
-        .data(data.entries.slice(0, 10))
-        .enter()
-        .append("g")
-          .attr("display", "none")
-          .attr("transform", function(d, i) {
-            if (i < 5) {
-              return "translate(" + (x(i + 1) + 15) + ',' + (y(d.elapsed_time) - 10) + ")"
-            } else {
-              return "translate(" + (x(i + 1) - 165) + ',' + (y(d.elapsed_time) - 10) + ")"
-            }
+        svg.selectAll(".hr")
+          .data(data.entries.slice(0, 10))
+          .transition()
+            .duration(1000)
+          .attr("y", function(d,i) {
+            return yhr(hrs[i]) + 16;
           })
-        .attr("class", "effort-info");
+          .attr("display", function() {
+            if (heart_rate) return "block";
+            else return "none"
+          });
 
-      effortInfo.append("rect")
-          .attr("width", 150)
-          .attr("height", 20)
-          .attr("fill", "#FC4C02");
-      effortInfo.append("circle")
+        svg.selectAll(".hr.txt")
+          .data(data.entries.slice(0, 10))
+          .transition()
+            .duration(1000)
+          .attr("y", function(d,i) {
+              return yhr(d.average_hr) + 33;
+            })
+          .text(function(d, i) { return Math.round(hrs[i]) })
+          .attr("display", function() {
+            if (heart_rate) return "block";
+            else return "none"
+          });
+
+        svg.selectAll(".white-circ").remove();
+
+        svg.selectAll("circle")
+          .data(data.entries.slice(0, 10))
+          .transition()
+            .duration(1000)
           .attr("cx", function(d, i) {
-            if (i < 5) return -15
-            else return 165
+            return x(i + 1);
           })
-          .attr("cy", 10)
+          .attr("cy", function(d) {
+            return y(d.elapsed_time);
+          })
           .attr("r", 16)
-          .attr("stroke-width", 3)
-          .attr("stroke", "#FC4C02")
-          .attr("fill", "none");
-      effortInfo.append("rect")
-          .attr("width", 135)
-          .attr("height", 36)
-          .attr("transform", function(d, i) {
-            if (i < 5) return "translate(15, 20)"
-            else return "translate(0, 20)"
+          .attr("stroke", function() {
+            if (wind) return "#98AFC7";
+            else return "orange";
           })
-          .attr("fill", "white")
-          .attr("stroke", "#fedccd")
-          .attr("stroke-width", 1);
-      effortInfo.append("image")
-        .attr("class", "effort-wind-icon")
-        .attr("xlink:href", "/static/wind.png")
-        .attr("height", "15")
-        .attr("width", "15")
-        .attr("x", function(d, i) {
-            if (i < 5) return 20
-            else return 5 })
-        .attr("y", 40);
-      effortInfo.append("text")
-          .attr("class", "effort-wind")
-          .text( function (d) {
-            return windDirection(d.wind_bearing)
-          })
-          .attr("fill", "black")
-          .attr("x", function(d, i) {
-            if (i < 5) return 40
-            else return 25 })
-          .attr("y", 51);
-      effortInfo.append("text")
-          .text( function (d) {
-            return d.athlete_name.slice(0, 15);
-          })
-          .attr("fill", "white")
-          .attr("text-anchor", function(d, i) {
-            if (i < 5) return "end"
-            else return "begin"
-          })
-          .attr("y", 15)
-          .attr("x", function(d, i) {
-            if (i < 5) return 145
-            else return 5
+          .attr("fill", function (d, i) {
+            return "url(#prof_pic_" + i + ")"})
+
+        if (wind) {
+          data.entries.slice(0, 10).forEach( function(d, i) {
+            date = d.start_date_local;
+            hour = parseInt(date.substring(11, 13)).toString();
+
+            if (i < 3) {
+                var tempi = i;
+                d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
+                  function(error, data) {
+                    hour_weather = data.hourly.data[hour]
+                    //should be the same
+                    br = (hour_weather.windBearing - 90) % 360;
+                    ws = hour_weather.windSpeed;
+                    d.wind_bearing = br
+                    d.wind_speed = ws
+
+                    var triData = [ 
+                      { "x" : x(i + 1) - 18 * Math.cos((br + 90) * .0174544), 
+                        "y" : y(d.elapsed_time) - 18 * Math.sin((br + 90) * .0174544) }, 
+                      { "x" : x(i + 1) + 18 * Math.cos((br + 90) * .0174544),
+                        "y" : y(d.elapsed_time) + 18 * Math.sin((br + 90) * .0174544) },
+                      { "x" : x(i + 1) + (d.wind_speed * -5 - 18) * Math.cos(d.wind_bearing * .0174533),
+                        "y" : y(d.elapsed_time) + (d.wind_speed * -5 - 18) * Math.sin(d.wind_bearing * .0174533) }
+                      ];
+
+                    svg.append("circle")
+                      .attr("cx", x(i + 1))
+                      .attr("cy", y(d.elapsed_time))
+                      .attr("r", 16)
+                      .attr("fill", "white")
+                      .attr("class", "white-circ")
+                      .moveToBack();
+
+                    svg.append("path")
+                      .attr("d", lineFunction(triData))
+                      .attr("class", "wind-triangle")
+                      //.attr("stroke", "98AFC7")
+                      //.attr("stroke-width", 2)
+                      .attr("fill", "#fffffe")
+                      .moveToBack()
+                      .transition().duration(600)
+                        .attr("fill", "white")
+                      .transition().duration(1000)
+                        .attr("fill", "#98AFC7");
+
+                    svg.selectAll(".axis").moveToBack();
+
+                    svg.selectAll(".effort-wind")
+                      .filter( function(d, i) {
+                        return i == tempi
+                      })
+                      .text( function(d) {
+                        return toMPH(d.wind_speed) + " " + windDirection(d.wind_bearing + 90);
+                      });
+                  })
+              }
           });
-      effortInfo.append("image")
-          .attr("class", "effort-wind-icon")
-          .attr("xlink:href", "/static/timer.png")
-          .attr("height", "15")
-          .attr("width", "15")
-          .attr("x", function(d, i) {
-            if (i < 5) return 20
-            else return 5 })
-          .attr("y", 22);
-      effortInfo.append("text")
-          .text( function (d) {
-            return d.elapsed_time.toString().toHHMMSS();
-          })
-          .attr("fill", "black")
-          .attr("y", 33)
-          .attr("x", function(d, i) {
-            if (i < 5) return 40
-            else return 25 });
-
-      svg.selectAll(".hr")
-        .data(data.entries.slice(0, 10))
-        .transition()
-          .duration(1000)
-          .ease("elastic")
-        .attr("y", function(d,i) {
-          return yhr(hrs[i]) + 16;
-        })
-        .attr("display", function() {
-          if (heart_rate) return "block";
-          else return "none"
-        });
-
-      svg.selectAll(".hr.txt")
-        .data(data.entries.slice(0, 10))
-        .transition()
-          .duration(1000)
-          .ease("elastic")
-        .attr("y", function(d,i) {
-            return yhr(d.average_hr) + 33;
-          })
-        .text(function(d, i) { return Math.round(hrs[i]) })
-        .attr("display", function() {
-          if (heart_rate) return "block";
-          else return "none"
-        });
-
-      svg.selectAll(".white-circ").remove();
-
-      svg.selectAll("circle")
-        .data(data.entries.slice(0, 10))
-        .transition()
-          .duration(1000)
-          .ease("elastic")
-        .attr("cx", function(d, i) {
-          return x(i + 1);
-        })
-        .attr("cy", function(d) {
-          return y(d.elapsed_time);
-        })
-        .attr("r", 16)
-        .attr("stroke", function() {
-          if (wind) return "#98AFC7";
-          else return "orange";
-        })
-        .attr("fill", function (d, i) {
-          return "url(#prof_pic_" + i + ")"})
-
-
-      if (wind) {
-        data.entries.slice(0, 10).forEach( function(d, i) {
-          date = d.start_date_local;
-          hour = parseInt(date.substring(11, 13)).toString();
-
-          if (i < 13) {
-              var tempi = i;
-              d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
-                function(error, data) {
-                  hour_weather = data.hourly.data[hour]
-                  //should be the same
-                  br = (hour_weather.windBearing - 90) % 360;
-                  ws = hour_weather.windSpeed;
-                  d.wind_bearing = br
-                  d.wind_speed = ws
-
-                  var triData = [ 
-                    { "x" : x(i + 1) - 18 * Math.cos((br + 90) * .0174544), 
-                      "y" : y(d.elapsed_time) - 18 * Math.sin((br + 90) * .0174544) }, 
-                    { "x" : x(i + 1) + 18 * Math.cos((br + 90) * .0174544),
-                      "y" : y(d.elapsed_time) + 18 * Math.sin((br + 90) * .0174544) },
-                    { "x" : x(i + 1) + (d.wind_speed * -5 - 18) * Math.cos(d.wind_bearing * .0174533),
-                      "y" : y(d.elapsed_time) + (d.wind_speed * -5 - 18) * Math.sin(d.wind_bearing * .0174533) }
-                    ];
-
-                  svg.append("circle")
-                    .attr("cx", x(i + 1))
-                    .attr("cy", y(d.elapsed_time))
-                    .attr("r", 16)
-                    .attr("fill", "white")
-                    .attr("class", "white-circ")
-                    .moveToBack();
-
-                  svg.append("path")
-                    .attr("d", lineFunction(triData))
-                    .attr("class", "wind-triangle")
-                    //.attr("stroke", "98AFC7")
-                    //.attr("stroke-width", 2)
-                    .attr("fill", "#98AFC7")
-                    .moveToBack();
-
-                  svg.selectAll(".axis").moveToBack();
-
-                  svg.selectAll(".effort-wind")
-                    .filter( function(d, i) {
-                      return i == tempi
-                    })
-                    .text( function(d) {
-                      return toMPH(d.wind_speed) + " " + windDirection(d.wind_bearing + 90);
-                    });
-                })
-            }
-        });
-      };
-    });
+        };
+      });
+});
   }
 
   drawGraph("820797", "M", false, true);

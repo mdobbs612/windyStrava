@@ -1,4 +1,7 @@
 import requests
+from requests_toolbelt.adapters import appengine
+
+appengine.monkeypatch()
 
 def strava_segment(id): 
 	strava_access = '4207c2d027c24cc9a2b99d47f0d4531f3d8b627b'
