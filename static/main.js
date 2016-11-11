@@ -75,7 +75,9 @@ $(document).ready( function() {
   }
 
   function getRandomSegment() {
-    randomIds = ["5438696", "101", "170", "983", "1270807", "287" ]
+    randomIds = ["5438696", "101", "3862964", "7297580", "4638661", 
+                 "170", "7297580", "6850650", "280", "4159", "1147",
+                 "1270807", "287" ]
     return randomIds[Math.floor(Math.random()*randomIds.length)];
     //820797
   }
@@ -318,7 +320,7 @@ $(document).ready( function() {
 
       drawMap(lat1, lon1, lat2, lon2, segment_data.map.polyline);
 
-      d3.json("/leaderboard/" + id + "/" + "F", function(error, data) {
+      d3.json("/leaderboard/" + id + "/" + gender, function(error, data) {
         console.log(data);
 
         var ldr_data = data;
@@ -421,7 +423,7 @@ $(document).ready( function() {
             date = d.start_date_local;
             hour = parseInt(date.substring(11, 13)).toString();
 
-            if (i < 3) {
+            if (i < 13) {
                 var tempi = i;
                 d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
                   function(error, data) {
@@ -488,8 +490,6 @@ $(document).ready( function() {
       }
     }
 
-    
-    console.log(gender);
     var wind = true //d3.select("#wind-select")[0][0].checked;
     var heart_rate = false //d3.select("#hr-select")[0][0].checked;
     var svg = d3.select("body").select("svg").select("g");
@@ -511,9 +511,7 @@ $(document).ready( function() {
 
       drawMap(lat1, lon1, lat2, lon2, segment_data.map.polyline);
       var g = d3.select("input[name='gender']:checked")[0][0].value;
-      console.log("second", gender);
-      d3.json("/leaderboard/" + id + "/" + "F", function(error, data) {
-        console.log(data, gender);
+      d3.json("/leaderboard/" + id + "/" + gender, function(error, data) {
         var minTime = data.entries[0].moving_time;
         var maxTime = data.entries[9].moving_time;
 
@@ -592,7 +590,7 @@ $(document).ready( function() {
             date = d.start_date_local;
             hour = parseInt(date.substring(11, 13)).toString();
 
-            if (i < 3) {
+            if (i < 13) {
                 var tempi = i;
                 d3.json("/weather/" + lat1 + "/" + lon2 + "/" + d.start_date_local, 
                   function(error, data) {

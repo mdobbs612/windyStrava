@@ -40,6 +40,13 @@ svg {
 	font-size: 30px;
 }
 
+#poweredby {
+	width: 200px;
+	position: absolute;
+	bottom: 0px;
+	right: 0px;
+}
+
 .hr {
 	width: 28px;
 	height: 28px;
